@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>菜单管理</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: 'PingFang SC', sans-serif; background:#1a1a2e; color:#fff; min-height:100vh; padding-bottom:40px; }
+.header { background:linear-gradient(135deg,#16213e,#0f3460); padding:14px 16px; display:flex; align-items:center; gap:12px; position:sticky; top:0; z-index:50; }
+.header h1 { font-size:18px; color:#4a90e2; }
+.back-btn { font-size:22px; cursor:pointer; }
+
+.cat-tabs { display:flex; overflow-x:auto; background:#16213e; scrollbar-width:none; }
+.cat-tabs::-webkit-scrollbar { display:none; }
+.cat-tab { padding:12px 16px; white-space:nowrap; cursor:pointer; font-size:14px; color:#888; border-bottom:3px solid transparent; flex-shrink:0; }
+.cat-tab.active { color:#4a90e2; border-bottom:3px solid #4a90e2; }
+
+.content { padding:16px; }
+
+.add-btn { width:100%; padding:14px; background:linear-gradient(135deg,#4a90e2,#357abd); color:#fff; border:none; border-radius:12px; font-size:15px; font-weight:bold; cursor:pointer; margin-bottom:16px; }
+
+.menu-card { background:#16213e; border-radius:12px; padding:14px; margin-bottom:10px; border:1px solid #0f3460; }
+.menu-card-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.menu-card-name { font-size:15px; font-weight:bold; }
+.menu-card-price { font-size:16px; color:#f5a623; font-weight:bold; }
+.menu-card-sub { font-size:12px; color:#888; margin-bottom:8px; }
+.card-actions { display:flex; gap:8px; }
+.edit-btn { flex:1; padding:8px; background:#4a90e2; color:#fff; border:none; border-radius:8px; font-size:13px; cursor:pointer; }
+.del-btn { flex:1; padding:8px; background:#e94560; color:#fff; border:none; border-radius:8px; font-size:13px; cursor:pointer; }
+
+/* 模态框 */
+.modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:100; overflow-y:auto; }
+.modal.open { display:block; }
+.modal-content { background:#16213e; margin:20px auto; border-radius:16px; padding:20px; max-width:480px; }
+.modal-title { font-size:18px; font-weight:bold; margin-bottom:16px; color:#4a90e2; }
+.form-group { margin-bottom:14px; }
+.form-label { font-size:13px; color:#888; margin-bottom:6px; display:block; }
+.form-input { width:100%; background:#1a1a2e; border:1px solid #333; border-radius:8px; color:#fff; padding:10px 12px; font-size:14px; }
+.form-select { width:100%; background:#1a1a2e; border:1px solid #333; border-radius:8px; color:#fff; padding:10px 12px; font-size:14px; }
+.modal-actions { display:flex; gap:10px; margin-top:16px; }
+.btn-save { flex:1; padding:14px; background:#4a90e2; color:#fff; border:none; border-radius:10px; font-size:15px; font-weight:bold; cursor:pointer; }
+.btn-cancel { flex:1; padding:14px; background:#333; color:#fff; border:none; border-radius:10px; font-size:15px; cursor:pointer; }
+</style>
+</head>
+<body>
+<div class="header">
+  <span class="back-btn" onclick="location.href='/'">←</span>
+  <h1>⚙️ 菜单管理 / Menü-Verwaltung</h1>
+</div>
+
+<div class="cat-tabs" id="cat-tabs"></div>
+<div class="content">
+  <button class="add-btn" onclick="openAdd()">+ 添加菜品 / Gericht hinzufügen</button>
+  <div id="menu-list"></div>
+</div>
+
+<!-- 编辑模态框 -->
+<div class="modal" id="edit-modal">
+  <div class="modal-content">
+    <div class="modal-title" id="modal-title">添加菜品</div>
+    <input type="hidden" id="edit-id">
+    <div class="form-group">
+      <label class="form-label">分类 / Kategorie</label>
+      <select class="form-select" id="edit-category" onchange="updateSubcats()">
+        <option value="drinks">酒水 / Getränke</option>
+        <option value="starters">前菜 / Vorspeisen</option>
+        <option value="mains">主食 / Hauptgerichte</option>
+        <option value="desserts">甜品 / Desserts</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">子分类 / Unterkategorie</label>
+      <select class="form-select" id="edit-subcategory"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">中文名称</label>
+      <input class="form-input" type="text" id="edit-name" placeholder="菜品名称">
+    </div>
+    <div class="form-group">
+      <label class="form-label">德文名称 / Deutscher Name</label>
+      <input class="form-input" type="text" id="edit-name-de" placeholder="Deutsches Name">
+    </div>
+    <div class="form-group">
+      <label class="form-label">价格 / Preis (€)</label>
+      <input class="form-input" type="number" id="edit-price" placeholder="0.00" step="0.01" min="0">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">取消</button>
+      <button class="btn-save" onclick="saveItem()">保存 / Speichern</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentCat = 'drinks';
+let menuData = [];
+
+const subcats = {
+  drinks: ['beer','wine','sake','whisky','cocktail','soft','coffee','homemade'],
+  starters: ['starters'],
+  mains: ['ramen','sides'],
+  desserts: ['desserts'],
+};
+const subcatLabels = {
+  beer:'啤酒', wine:'葡萄酒', sake:'清酒', whisky:'威士忌',
+  cocktail:'鸡尾酒', soft:'无酒精', coffee:'咖啡', homemade:'自制饮料',
+  starters:'前菜', ramen:'拉面', sides:'配菜', desserts:'甜品'
+};
+const categories = ['drinks','starters','mains','desserts'];
+const catLabels = { drinks:'酒水', starters:'前菜', mains:'主食', desserts:'甜品' };
+
+function renderCatTabs() {
+  const tabs = document.getElementById('cat-tabs');
+  tabs.innerHTML = '';
+  categories.forEach(cat => {
+    const tab = document.createElement('div');
+    tab.className = `cat-tab ${cat === currentCat ? 'active' : ''}`;
+    tab.textContent = catLabels[cat];
+    tab.onclick = () => { currentCat = cat; renderCatTabs(); renderMenu(); };
+    tabs.appendChild(tab);
+  });
+}
+
+function renderMenu() {
+  const list = document.getElementById('menu-list');
+  const items = menuData.filter(i => i.category === currentCat);
+  if (items.length === 0) { list.innerHTML = '<p style="color:#444;text-align:center;padding:40px">暂无菜品</p>'; return; }
+  
+  list.innerHTML = items.map(i => `
+    <div class="menu-card">
+      <div class="menu-card-header">
+        <span class="menu-card-name">${i.name}</span>
+        <span class="menu-card-price">€ ${parseFloat(i.price).toFixed(2)}</span>
+      </div>
+      <div class="menu-card-sub">${i.name_de} · ${subcatLabels[i.subcategory] || i.subcategory}</div>
+      <div class="card-actions">
+        <button class="edit-btn" onclick='openEdit(${JSON.stringify(i)})'>✏️ 编辑</button>
+        <button class="del-btn" onclick="deleteItem(${i.id})">🗑️ 删除</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function updateSubcats() {
+  const cat = document.getElementById('edit-category').value;
+  const sel = document.getElementById('edit-subcategory');
+  sel.innerHTML = (subcats[cat] || []).map(s => `<option value="${s}">${subcatLabels[s] || s}</option>`).join('');
+}
+
+function openAdd() {
+  document.getElementById('modal-title').textContent = '添加菜品';
+  document.getElementById('edit-id').value = '';
+  document.getElementById('edit-category').value = currentCat;
+  document.getElementById('edit-name').value = '';
+  document.getElementById('edit-name-de').value = '';
+  document.getElementById('edit-price').value = '';
+  updateSubcats();
+  document.getElementById('edit-modal').classList.add('open');
+}
+
+function openEdit(item) {
+  document.getElementById('modal-title').textContent = '编辑菜品';
+  document.getElementById('edit-id').value = item.id;
+  document.getElementById('edit-category').value = item.category;
+  updateSubcats();
+  document.getElementById('edit-subcategory').value = item.subcategory;
+  document.getElementById('edit-name').value = item.name;
+  document.getElementById('edit-name-de').value = item.name_de;
+  document.getElementById('edit-price').value = item.price;
+  document.getElementById('edit-modal').classList.add('open');
+}
+
+function closeModal() { document.getElementById('edit-modal').classList.remove('open'); }
+
+async function saveItem() {
+  const data = {
+    id: document.getElementById('edit-id').value || null,
+    category: document.getElementById('edit-category').value,
+    subcategory: document.getElementById('edit-subcategory').value,
+    name: document.getElementById('edit-name').value,
+    name_de: document.getElementById('edit-name-de').value,
+    price: parseFloat(document.getElementById('edit-price').value) || 0,
+  };
+  if (!data.name) { alert('请输入菜品名称'); return; }
+  await fetch('/api/menu/update', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+  closeModal();
+  await loadMenu();
+}
+
+async function deleteItem(id) {
+  if (!confirm('确认删除此菜品？')) return;
+  await fetch(`/api/menu/${id}`, { method:'DELETE' });
+  await loadMenu();
+}
+
+async function loadMenu() {
+  const res = await fetch('/api/menu');
+  menuData = await res.json();
+  renderMenu();
+}
+
+renderCatTabs();
+updateSubcats();
+loadMenu();
+</script>
+</body>
+</html>

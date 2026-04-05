@@ -14,7 +14,7 @@ DB_PATH = 'restaurant.db'
 
 # ==================== 密码 ====================
 STAFF_PASSWORD = 'ramen2026'
-ADMIN_PASSWORD = 'mrdu@admin'
+ADMIN_PASSWORD = 'djj19851204'
 
 # 连入设备追踪
 connected_devices = {}
@@ -209,7 +209,7 @@ def get_db():
 
 # ==================== 密码 ====================
 STAFF_PASSWORD = 'ramen2026'
-ADMIN_PASSWORD = 'mrdu@admin'
+ADMIN_PASSWORD = 'djj19851204'
 connected_devices = {}
 
 def login_required(f):

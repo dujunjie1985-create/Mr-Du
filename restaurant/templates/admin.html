@@ -8,7 +8,13 @@
 * { margin:0; padding:0; box-sizing:border-box; }
 body { font-family: 'PingFang SC', sans-serif; background:#1a1a2e; color:#fff; min-height:100vh; padding-bottom:40px; }
 .header { background:linear-gradient(135deg,#16213e,#0f3460); padding:14px 16px; display:flex; align-items:center; gap:12px; position:sticky; top:0; z-index:50; }
-.header h1 { font-size:18px; color:#4a90e2; }
+.header h1 { font-size:18px; color:#4a90e2; flex:1; }
+.device-btn { padding:6px 12px; background:#27ae60; color:#fff; border:none; border-radius:8px; font-size:12px; cursor:pointer; }
+.logout-btn { padding:6px 12px; background:#e94560; color:#fff; border:none; border-radius:8px; font-size:12px; cursor:pointer; }
+.device-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:200; overflow-y:auto; }
+.device-modal.open { display:block; }
+.device-box { background:#16213e; margin:20px; border-radius:16px; padding:20px; }
+.device-card { background:#1a1a2e; border-radius:10px; padding:12px 16px; margin-bottom:8px; border-left:3px solid #27ae60; font-size:13px; }
 .back-btn { font-size:22px; cursor:pointer; }
 
 .cat-tabs { display:flex; overflow-x:auto; background:#16213e; scrollbar-width:none; }
@@ -46,7 +52,9 @@ body { font-family: 'PingFang SC', sans-serif; background:#1a1a2e; color:#fff; m
 <body>
 <div class="header">
   <span class="back-btn" onclick="location.href='/'">←</span>
-  <h1>⚙️ 菜单管理 / Menü-Verwaltung</h1>
+  <h1>⚙️ 管理 / Verwaltung</h1>
+  <button class="device-btn" onclick="openDevices()">📱 设备</button>
+  <button class="logout-btn" onclick="location.href='/logout'">退出</button>
 </div>
 
 <div class="cat-tabs" id="cat-tabs"></div>
@@ -206,3 +214,35 @@ loadMenu();
 </script>
 </body>
 </html>
+
+<!-- 设备模态框 -->
+<div class="device-modal" id="device-modal">
+  <div class="device-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <span style="font-size:16px;font-weight:bold;color:#27ae60;">📱 已连入设备</span>
+      <span style="font-size:22px;cursor:pointer;color:#888;" onclick="closeDevices()">✕</span>
+    </div>
+    <div id="device-list"></div>
+  </div>
+</div>
+<script>
+async function openDevices() {
+  const res = await fetch('/api/devices');
+  const devices = await res.json();
+  const list = document.getElementById('device-list');
+  if (devices.length === 0) {
+    list.innerHTML = '<div style="text-align:center;color:#444;padding:30px">暂无连入设备</div>';
+  } else {
+    list.innerHTML = devices.map(d => `
+      <div class="device-card">
+        <div style="font-weight:bold;color:#fff;margin-bottom:4px;">${d.role === '管理员' ? '👑' : '👤'} ${d.role}</div>
+        <div style="color:#888;">IP: ${d.ip} &nbsp;|&nbsp; 登录时间: ${d.time}</div>
+      </div>
+    `).join('');
+  }
+  document.getElementById('device-modal').classList.add('open');
+}
+function closeDevices() {
+  document.getElementById('device-modal').classList.remove('open');
+}
+</script>

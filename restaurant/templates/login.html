@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Mr. Du Ramen - 登录</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'PingFang SC', sans-serif;
+  background: linear-gradient(135deg, #0d1117, #1a1a2e, #16213e);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.login-box {
+  background: #161b22;
+  border-radius: 20px;
+  padding: 40px 32px;
+  width: 90%;
+  max-width: 380px;
+  border: 1px solid #30363d;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.logo { text-align: center; margin-bottom: 28px; }
+.logo h1 { font-size: 28px; color: #e94560; margin-bottom: 6px; }
+.logo p { font-size: 14px; color: #888; }
+.form-group { margin-bottom: 20px; }
+.form-label { display: block; font-size: 13px; color: #888; margin-bottom: 8px; }
+.form-input {
+  width: 100%;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 10px;
+  color: #fff;
+  padding: 14px 16px;
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.form-input:focus { border-color: #e94560; }
+.login-btn {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #e94560, #c0392b);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.login-btn:active { opacity: 0.8; }
+.error {
+  background: #2d1b1b;
+  border: 1px solid #e94560;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #e94560;
+  margin-bottom: 16px;
+  text-align: center;
+}
+.hint { text-align: center; font-size: 12px; color: #444; margin-top: 20px; }
+</style>
+</head>
+<body>
+<div class="login-box">
+  <div class="logo">
+    <h1>🍜 Mr. Du Ramen</h1>
+    <p>餐厅管理系统 / Restaurant System</p>
+  </div>
+  {% if error %}
+  <div class="error">{{ error }}</div>
+  {% endif %}
+  <form method="POST">
+    <div class="form-group">
+      <label class="form-label">密码 / Passwort</label>
+      <input class="form-input" type="password" name="password" placeholder="请输入密码..." autofocus>
+    </div>
+    <button class="login-btn" type="submit">登录 / Anmelden</button>
+  </form>
+  <div class="hint">请输入员工或管理员密码</div>
+</div>
+</body>
+</html>

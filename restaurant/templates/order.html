@@ -330,6 +330,14 @@ async function checkout() {
   location.href = '/';
 }
 
+// 读取并应用保存的语言
+try {
+  const savedLang = localStorage.getItem('lang');
+  if (savedLang && ['zh','de','en'].includes(savedLang)) {
+    currentLang = savedLang;
+  }
+} catch(e) {}
+
 init();
 </script>
 </body>

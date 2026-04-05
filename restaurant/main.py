@@ -55,6 +55,8 @@ def init_db():
         zone TEXT,
         items TEXT,
         status TEXT DEFAULT 'pending',
+        kitchen_status TEXT DEFAULT 'pending',
+        bar_status TEXT DEFAULT 'pending',
         created_at TEXT,
         notes TEXT
     )''')
@@ -342,9 +344,9 @@ def complete_order(order_id):
     item_type = data.get('type','all')
     conn = get_db()
     if item_type == 'kitchen':
-        conn.execute('UPDATE orders SET status="kitchen_done" WHERE id=?', (order_id,))
+        conn.execute('UPDATE orders SET kitchen_status="done" WHERE id=?', (order_id,))
     elif item_type == 'bar':
-        conn.execute('UPDATE orders SET status="bar_done" WHERE id=?', (order_id,))
+        conn.execute('UPDATE orders SET bar_status="done" WHERE id=?', (order_id,))
     else:
         conn.execute('UPDATE orders SET status="done" WHERE id=?', (order_id,))
     conn.commit()
@@ -378,6 +380,16 @@ def swap_tables():
     socketio.emit('tables_swapped', {'from_id':from_id,'to_id':to_id})
     return jsonify({'success':True})
 
+@app.route('/api/menu/reset', methods=['POST'])
+@admin_required
+def reset_menu():
+    conn = get_db()
+    conn.execute('DELETE FROM menu')
+    conn.commit()
+    conn.close()
+    init_db()
+    return jsonify({'success': True, 'message': '菜单已重置'})
+
 @app.route('/api/menu/update', methods=['POST'])
 @admin_required
 def update_menu():
@@ -406,7 +418,7 @@ def delete_menu_item(item_id):
 @login_required
 def kitchen_orders():
     conn = get_db()
-    orders = conn.execute('''SELECT * FROM orders WHERE status = "pending" ORDER BY created_at ASC''').fetchall()
+    orders = conn.execute('''SELECT * FROM orders WHERE status != "paid" AND kitchen_status = "pending" ORDER BY created_at ASC''').fetchall()
     conn.close()
     result = []
     for o in orders:
@@ -419,7 +431,7 @@ def kitchen_orders():
 @login_required
 def bar_orders():
     conn = get_db()
-    orders = conn.execute('''SELECT * FROM orders WHERE status IN ("pending","bar_done") ORDER BY created_at ASC''').fetchall()
+    orders = conn.execute('''SELECT * FROM orders WHERE status != "paid" AND bar_status = "pending" ORDER BY created_at ASC''').fetchall()
     conn.close()
     result = []
     for o in orders:

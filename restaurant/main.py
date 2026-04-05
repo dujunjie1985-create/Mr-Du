@@ -189,6 +189,14 @@ def init_db():
             ('desserts','desserts','大福 5个','YAMAMOTOYA DAIFUKU',6.90),
             ('desserts','desserts','芝麻糯米团 5个','Reisknoedel mit Sesam',3.80),
             ('desserts','desserts','芒果西米露','Mango Sago',7.50),
+            # 午市套餐
+            ('lunch','lunch','鸡肉面','Hühner-Nudelsuppe',9.90),
+            ('lunch','lunch','猪肉面','Schweinefleisch-Nudelsuppe',10.90),
+            ('lunch','lunch','素面','Vegetarische Nudelsuppe',10.90),
+            ('lunch','lunch','照烧鸡腿饭','Teriyaki-Hähnchenschenkel mit Reis',9.90),
+            ('lunch','lunch','素饺子米饭','Vegetarische Teigtaschen mit Reis',9.90),
+            ('lunch','lunch','冬阴功汤+素饺子套餐','Tom Yum Suppe + Vegetarische Teigtaschen',11.90),
+            ('lunch','lunch','冬阴功汤+猪肉饺子套餐','Tom Yum Suppe + Schweinefleisch-Teigtaschen',11.90),
         ]
         c.executemany('INSERT INTO menu (category, subcategory, name, name_de, price) VALUES (?, ?, ?, ?, ?)', default_menu)
     conn.commit()
@@ -419,6 +427,27 @@ def bar_orders():
         od['items'] = json.loads(od['items'])
         result.append(od)
     return jsonify(result)
+
+if __name__ == '__main__':
+    # 账单历史 - 只管理员可查
+    pass
+
+@app.route('/api/orders/history')
+@admin_required
+def orders_history():
+    conn = get_db()
+    orders = conn.execute('''SELECT * FROM orders WHERE status = "paid" ORDER BY created_at DESC LIMIT 100''').fetchall()
+    conn.close()
+    result = []
+    for o in orders:
+        od = dict(o)
+        od['items'] = json.loads(od['items'])
+        result.append(od)
+    return jsonify(result)
+
+@app.route('/qr')
+def qr_page():
+    return render_template('qr.html')
 
 if __name__ == '__main__':
     init_db()

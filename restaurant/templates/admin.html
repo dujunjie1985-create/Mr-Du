@@ -54,6 +54,8 @@ body { font-family: 'PingFang SC', sans-serif; background:#1a1a2e; color:#fff; m
   <span class="back-btn" onclick="location.href='/'">←</span>
   <h1>⚙️ 管理 / Verwaltung</h1>
   <button class="device-btn" onclick="openDevices()">📱 设备</button>
+  <button class="device-btn" onclick="location.href='/qr'" style="background:#9b59b6;">📷 二维码</button>
+  <button class="device-btn" onclick="openHistory()" style="background:#f5a623;">📋 账单历史</button>
   <button class="logout-btn" onclick="location.href='/logout'">退出</button>
 </div>
 
@@ -244,5 +246,54 @@ async function openDevices() {
 }
 function closeDevices() {
   document.getElementById('device-modal').classList.remove('open');
+}
+
+async function openHistory() {
+  const res = await fetch('/api/orders/history');
+  const orders = await res.json();
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:300;overflow-y:auto;';
+  
+  const grouped = {};
+  orders.forEach(o => {
+    const date = o.created_at.split(' ')[0];
+    if (!grouped[date]) grouped[date] = [];
+    grouped[date].push(o);
+  });
+
+  let html = '<div style="background:#16213e;margin:16px;border-radius:16px;padding:16px;">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">';
+  html += '<span style="font-size:16px;font-weight:bold;color:#f5a623;">📋 历史账单</span>';
+  html += '<span style="font-size:22px;cursor:pointer;color:#888;" onclick="this.closest(\'div[style*=fixed]\').remove()">✕</span>';
+  html += '</div>';
+
+  if (orders.length === 0) {
+    html += '<div style="text-align:center;color:#444;padding:40px">暂无历史账单</div>';
+  } else {
+    Object.entries(grouped).forEach(([date, dayOrders]) => {
+      const dayTotal = dayOrders.reduce((sum, o) => {
+        const items = o.items;
+        return sum + items.reduce((s, i) => s + i.price * i.qty, 0);
+      }, 0);
+      html += `<div style="background:#1a1a2e;border-radius:10px;padding:12px;margin-bottom:10px;">`;
+      html += `<div style="display:flex;justify-content:space-between;margin-bottom:8px;font-weight:bold;">`;
+      html += `<span style="color:#4a90e2;">📅 ${date}</span><span style="color:#f5a623;">€ ${dayTotal.toFixed(2)}</span></div>`;
+      dayOrders.forEach(o => {
+        const items = o.items;
+        const total = items.reduce((s, i) => s + i.price * i.qty, 0);
+        html += `<div style="border-top:1px solid #333;padding-top:6px;margin-top:6px;font-size:13px;">`;
+        html += `<div style="display:flex;justify-content:space-between;color:#888;margin-bottom:4px;">`;
+        html += `<span>🪑 ${o.table_name} &nbsp; ${o.created_at.split(' ')[1]}</span><span style="color:#f5a623;">€ ${total.toFixed(2)}</span></div>`;
+        items.forEach(i => {
+          html += `<div style="color:#666;padding-left:8px;">${i.name} × ${i.qty} — € ${(i.price*i.qty).toFixed(2)}</div>`;
+        });
+        html += '</div>';
+      });
+      html += '</div>';
+    });
+  }
+  html += '</div>';
+  modal.innerHTML = html;
+  document.body.appendChild(modal);
 }
 </script>

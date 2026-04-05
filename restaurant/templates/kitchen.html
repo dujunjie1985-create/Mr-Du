@@ -189,6 +189,7 @@ function renderOrders(orders) {
       const card = document.createElement('div');
       card.className = 'order-card';
       card.id = `card-${t.id}-${cid}`;
+      const label = cid === 's' ? '前菜 / Vorspeisen' : '主食 / Hauptgerichte';
       card.innerHTML = `
         <div class="card-header">
           <span class="table-badge">🪑 ${t.table_name}</span>
@@ -209,7 +210,7 @@ function renderOrders(orders) {
         </div>
         <div class="card-actions">
           <button class="urgent-btn" onclick="urgentAlert('${t.table_name}')">⚡</button>
-          <button class="done-btn" onclick="markDone(${t.id},'${t.table_name}')">✅ Fertig / 出菜</button>
+          <button class="done-btn" onclick="markDoneSection('${t.id}-${cid}','${t.table_name}','${cid}')">✅ ${cid==='s'?'前菜完成':'主食完成'} / Fertig</button>
         </div>
       `;
       container.appendChild(card);
@@ -223,21 +224,30 @@ function renderOrders(orders) {
   if (!hasMains) mL.innerHTML = '<div class="empty-msg">✅ 暂无待出主食<br>Keine Hauptgerichte</div>';
 }
 
+// 只消除该区域的卡片，不影响另一侧
+function markDoneSection(cardId, tableName, cid) {
+  const el = document.getElementById(`card-${cardId}`);
+  if (el) {
+    el.style.opacity = '0';
+    el.style.transition = 'opacity 0.3s';
+    setTimeout(() => el.remove(), 300);
+  }
+  const label = cid === 's' ? '前菜' : '主食';
+  showToast(`✅ ${tableName} ${label}已出！`, '#27ae60');
+  doneOrders.unshift({ table: tableName, time: new Date().toLocaleTimeString('de-DE'), section: label });
+}
+
 async function markDone(orderId, tableName) {
-  // 立刻从界面消失
   ['s','m'].forEach(cid => {
     const el = document.getElementById(`card-${orderId}-${cid}`);
     if (el) { el.style.opacity='0'; el.style.transition='opacity 0.3s'; setTimeout(()=>el.remove(),300); }
   });
-
   await fetch(`/api/order/${orderId}/complete`, {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({type:'kitchen'})
   });
-
-  showToast(`✅ ${tableName} 已出菜！`, '#27ae60');
+  showToast(`✅ ${tableName} 全部已出！`, '#27ae60');
   doneOrders.unshift({ table: tableName, time: new Date().toLocaleTimeString('de-DE'), id: orderId });
-  
   setTimeout(loadOrders, 500);
 }
 

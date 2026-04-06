@@ -306,7 +306,6 @@ def place_order():
     return jsonify({'success':True,'order_id':order_id})
 
 @app.route('/api/order/<int:order_id>/complete', methods=['POST'])
-@login_required
 def complete_order(order_id):
     data = request.json
     item_type = data.get('type','all')
@@ -424,4 +423,3 @@ def orders_history():
 if __name__ == '__main__':
     init_db()
     socketio.run(app, host='0.0.0.0', port=5000, debug=True)
-     

@@ -21,15 +21,16 @@ body { font-family:'PingFang SC',sans-serif; background:#0d1117; color:#fff; min
 .col-mains .col-header { background:#2e1a1a; color:#e94560; border-bottom:2px solid #e94560; }
 .order-card { margin:6px; border-radius:10px; padding:10px 12px; border:1px solid #333; background:#161b22; animation:slideIn 0.3s ease; }
 @keyframes slideIn { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
+@keyframes pulse { 0%,100%{border-color:#e94560;box-shadow:0 0 8px #e94560;} 50%{border-color:#ff6b6b;box-shadow:0 0 20px #e94560;} }
 .card-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
-.table-badge { background:#e94560; color:#fff; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:bold; }
+.table-badge { background:#e94560; color:#fff; padding:5px 14px; border-radius:20px; font-size:18px; font-weight:bold; }
 .time-badge { font-size:11px; color:#888; }
 .timer-bar { height:3px; background:#21262d; border-radius:2px; margin-bottom:6px; overflow:hidden; }
 .timer-fill { height:100%; border-radius:2px; transition:width 1s linear; }
-.order-item { display:flex; align-items:center; padding:5px 0; border-bottom:1px solid #21262d; gap:8px; font-size:13px; }
+.order-item { display:flex; align-items:center; padding:8px 0; border-bottom:1px solid #21262d; gap:8px; font-size:22px; }
 .order-item:last-child { border-bottom:none; }
 .order-item.done-item { opacity:0.3; text-decoration:line-through; }
-.item-qty { background:#e94560; color:#fff; width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:bold; flex-shrink:0; }
+.item-qty { background:#e94560; color:#fff; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:bold; flex-shrink:0; }
 .item-name { flex:1; }
 .item-name-de { font-size:11px; color:#aaa; }
 .item-check { width:26px; height:26px; border-radius:50%; border:none; background:#27ae60; color:#fff; cursor:pointer; font-size:14px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
@@ -166,9 +167,9 @@ function getElapsed(createdAt) {
 }
 
 function getTimerColor(elapsed) {
-  if (elapsed < 300) return '#2ecc71';
-  if (elapsed < 600) return '#f5a623';
-  return '#e94560';
+  if (elapsed < 600) return '#2ecc71';   // 0-10分钟 绿色
+  if (elapsed < 1200) return '#f5a623';  // 10-20分钟 橙色
+  return '#e94560';                       // 20分钟以上 红色
 }
 
 const DRINKS = ['啤酒','葡萄酒','鸡尾酒','威士忌','咖啡','矿泉水','可乐','柠檬水','冰茶','清酒','伏特加','朗姆','龙舌兰','浓缩','卡布','拿铁','美式','红茶','绿茶','苏打','椰子','果汁','卡尔','柚子','芦荟','汤力','生啤','起泡','玫瑰','霞多','茨威','威特','beer','wine','cocktail','whisky','coffee','soft','sake','espresso','latte','tee','tea','juice','wasser','soda','calpis','yuzuka','spritzer','martini','negroni','campari','aperol','lillet','tonic'];
@@ -235,6 +236,7 @@ function renderOrders(orders) {
               <div>${i.name_de || i.name}</div>
               <div class="item-name-de">${i.name !== i.name_de ? i.name : ''}</div>
               ${i.note ? `<div class="item-note">📝 ${i.note}</div>` : ''}
+              ${i.notes ? `<div class="item-note">📝 ${i.notes}</div>` : ''}
             </div>
             <button class="item-check${done?' done':''}" onclick="toggleItem('${key}','${t.id}','${cid}')" title="单独完成">
               ${done ? '↩' : '✓'}
@@ -248,6 +250,7 @@ function renderOrders(orders) {
           <span class="time-badge" id="tm-${t.id}-${cid}">${text}</span>
         </div>
         <div class="timer-bar"><div class="timer-fill" id="bar-${t.id}-${cid}" style="width:${pct}%;background:${color}"></div></div>
+        ${t.notes ? `<div style="background:#2d2000;padding:6px 10px;border-radius:6px;margin-bottom:6px;font-size:12px;color:#f5a623;">📋 ${t.notes}</div>` : ''}
         <div id="items-${t.id}-${cid}">${itemsHtml}</div>
         <div class="card-actions">
           <button class="urgent-btn" onclick="urgentAlert('${t.table_name}')">⚡ Eilig</button>
@@ -256,8 +259,8 @@ function renderOrders(orders) {
       container.appendChild(card);
     };
 
-    if (t.starterItems.length > 0) { makeCard(t.starterItems, sL, 's'); hasS=true; }
-    if (t.mainItems.length > 0) { makeCard(t.mainItems, mL, 'm'); hasM=true; }
+    if (t.starterItems.length > 0 && !sectionDone[t.id]?.s) { makeCard(t.starterItems, sL, 's'); hasS=true; }
+    if (t.mainItems.length > 0 && !sectionDone[t.id]?.m) { makeCard(t.mainItems, mL, 'm'); hasM=true; }
   });
 
   if (!hasS) sL.innerHTML = '<div class="empty-msg">✅ 暂无待出前菜<br>Keine Vorspeisen</div>';
@@ -283,6 +286,9 @@ function toggleItem(key, orderId, cid) {
   playSound('done');
 }
 
+// 记录哪些订单的哪个部分已完成
+const sectionDone = {}; // key: orderId, value: {s: bool, m: bool}
+
 async function markAllDone(orderId, tableName, cid) {
   const card = document.getElementById(`card-${orderId}-${cid}`);
   if (card) {
@@ -298,12 +304,19 @@ async function markAllDone(orderId, tableName, cid) {
     timestamp: Date.now(), cid
   });
   Object.keys(itemsDone).forEach(k => { if (k.startsWith(`${orderId}-${cid}`)) delete itemsDone[k]; });
-  await fetch(`/api/order/${parseInt(orderId)}/complete`, {
+
+  // 记录该部分已完成
+  if (!sectionDone[orderId]) sectionDone[orderId] = {};
+  sectionDone[orderId][cid] = true;
+
+  // 通知后端
+  await fetch(`/api/order/${orderId}/complete`, {
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body: JSON.stringify({type:'kitchen'})
   });
 }
+
 function urgentAlert(tableName) {
   playSound('urgent');
   showToast(`⚡ 加急：${tableName}！`, '#f5a623');
@@ -348,14 +361,37 @@ setInterval(() => {
   kitchenOrders.forEach(o => {
     const {elapsed,text} = getElapsed(o.created_at);
     const color = getTimerColor(elapsed);
-    const pct = Math.min((elapsed/900)*100,100);
+    const pct = Math.min((elapsed/1800)*100,100);
     ['s','m'].forEach(cid => {
       const tm = document.getElementById(`tm-${o.id}-${cid}`);
       const bar = document.getElementById(`bar-${o.id}-${cid}`);
+      const card = document.getElementById(`card-${o.id}-${cid}`);
       if (tm) tm.textContent = text;
       if (bar) { bar.style.width=pct+'%'; bar.style.background=color; }
+      // 20分钟以上 卡片边框闪烁红色
+      if (card) {
+        if (elapsed >= 1200) {
+          card.style.border = '2px solid #e94560';
+          card.style.animation = 'pulse 1s infinite';
+        } else if (elapsed >= 600) {
+          card.style.border = '1px solid #f5a623';
+          card.style.animation = '';
+        } else {
+          card.style.border = '1px solid #333';
+          card.style.animation = '';
+        }
+      }
     });
   });
+  // 20分钟超时声音提醒（每分钟一次）
+  if (kitchenOrders.some(o => getElapsed(o.created_at).elapsed >= 1200)) {
+    const now = Date.now();
+    if (!window.lastWarning || now - window.lastWarning > 60000) {
+      window.lastWarning = now;
+      playSound('urgent');
+      showToast('⚠️ 有订单超过20分钟！', '#e94560');
+    }
+  }
 }, 1000);
 
 socket.on('new_order', data => {
@@ -363,7 +399,10 @@ socket.on('new_order', data => {
   showToast(`🆕 新订单：${data.table_name}`, '#e94560');
   loadOrders();
 });
-socket.on('order_updated', loadOrders);
+socket.on('order_updated', data => {
+  // 其他设备收到广播后重新加载
+  loadOrders();
+});
 
 async function loadOrders() {
   const res = await fetch('/api/kitchen/orders');

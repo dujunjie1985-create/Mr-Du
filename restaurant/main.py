@@ -347,22 +347,7 @@ def place_order():
 
 @app.route('/api/order/<int:order_id>/complete', methods=['POST'])
 @login_required
-def complete_order(order_id):
-    data = request.json
-    item_type = data.get('type','all')
-    conn = get_db()
-if item_type == 'kitchen':
-conn.execute('UPDATE orders SET status="kitchen_done" WHERE id=?', (order_id,))
-elif item_type == 'bar':
-conn.execute('UPDATE orders SET bar_status="done" WHERE id=?', (order_id,))
-else:
-conn.execute('UPDATE orders SET status="done" WHERE id=?', (order_id,))
-else:
-conn.execute('UPDATE orders SET status="done" WHERE id=?', (order_id,))
-    conn.commit()
-    conn.close()
-    socketio.emit('order_updated', {'order_id':order_id,'type':item_type})
-    return jsonify({'success':True})
+complete_order
 
 @app.route('/api/table/<int:table_id>/checkout', methods=['POST'])
 @login_required

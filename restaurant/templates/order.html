@@ -6,55 +6,51 @@
 <title>点餐</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
-body { font-family: 'PingFang SC', sans-serif; background:#1a1a2e; color:#fff; min-height:100vh; padding-bottom:160px; }
-
-.header { background:linear-gradient(135deg,#16213e,#0f3460); padding:14px 16px; display:flex; align-items:center; gap:12px; position:sticky; top:0; z-index:50; box-shadow:0 2px 10px rgba(0,0,0,0.4); }
+body { font-family:'PingFang SC',sans-serif; background:#1a1a2e; color:#fff; min-height:100vh; padding-bottom:160px; }
+.header { background:linear-gradient(135deg,#16213e,#0f3460); padding:12px 16px; display:flex; align-items:center; gap:12px; position:sticky; top:0; z-index:50; box-shadow:0 2px 10px rgba(0,0,0,0.4); }
 .back-btn { font-size:22px; cursor:pointer; }
-.header-info h2 { font-size:18px; color:#e94560; }
+.header-info h2 { font-size:17px; color:#e94560; }
 .header-info p { font-size:12px; color:#888; }
-
-/* 账单区域 - 固定在header下方 */
 .bill-area { background:#16213e; border-bottom:2px solid #e94560; }
-.bill-inner { padding:14px 16px; }
-.bill-title { font-size:15px; font-weight:bold; color:#f5a623; margin-bottom:10px; }
-.bill-item { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #1a1a2e; font-size:14px; }
-.bill-total-row { display:flex; justify-content:space-between; padding:10px 0 6px; font-size:17px; font-weight:bold; color:#f5a623; }
-.checkout-btn { width:100%; padding:12px; background:linear-gradient(135deg,#27ae60,#1e8449); color:#fff; border:none; border-radius:10px; font-size:15px; font-weight:bold; cursor:pointer; margin-top:8px; }
-.add-more-bar { background:#0f3460; padding:10px 16px; font-size:13px; color:#f5a623; font-weight:bold; }
-
+.bill-inner { padding:12px 16px; }
+.bill-title { font-size:14px; font-weight:bold; color:#f5a623; margin-bottom:8px; }
+.bill-item { display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid #1a1a2e; font-size:13px; }
+.bill-total-row { display:flex; justify-content:space-between; padding:8px 0 4px; font-size:16px; font-weight:bold; color:#f5a623; }
+.checkout-btn { width:100%; padding:11px; background:linear-gradient(135deg,#27ae60,#1e8449); color:#fff; border:none; border-radius:10px; font-size:14px; font-weight:bold; cursor:pointer; margin-top:8px; }
+.add-more-bar { background:#0f3460; padding:8px 16px; font-size:12px; color:#f5a623; font-weight:bold; }
 .category-tabs { display:flex; overflow-x:auto; background:#16213e; padding:0 8px; gap:4px; scrollbar-width:none; border-bottom:1px solid #0f3460; }
 .category-tabs::-webkit-scrollbar { display:none; }
-.cat-tab { padding:12px 16px; white-space:nowrap; cursor:pointer; font-size:14px; color:#888; border-bottom:3px solid transparent; transition:all 0.2s; flex-shrink:0; }
+.cat-tab { padding:11px 14px; white-space:nowrap; cursor:pointer; font-size:13px; color:#888; border-bottom:3px solid transparent; flex-shrink:0; }
 .cat-tab.active { color:#e94560; border-bottom:3px solid #e94560; }
-
 .drinks-sub-tabs { display:flex; overflow-x:auto; padding:8px 12px; gap:8px; background:#1a1a2e; scrollbar-width:none; }
 .drinks-sub-tabs::-webkit-scrollbar { display:none; }
-.sub-tab { padding:6px 14px; border-radius:20px; border:1px solid #333; background:transparent; color:#888; font-size:13px; cursor:pointer; white-space:nowrap; flex-shrink:0; }
+.sub-tab { padding:5px 12px; border-radius:20px; border:1px solid #333; background:transparent; color:#888; font-size:12px; cursor:pointer; white-space:nowrap; flex-shrink:0; }
 .sub-tab.active { background:#f5a623; color:#fff; border-color:#f5a623; }
 
-.menu-item { display:flex; align-items:center; padding:12px 16px; border-bottom:1px solid #16213e; gap:12px; }
-.item-info { flex:1; }
-.item-name { font-size:15px; font-weight:bold; }
-.item-name-de { font-size:12px; color:#888; margin-top:2px; }
-.item-price { font-size:15px; color:#f5a623; font-weight:bold; min-width:60px; text-align:right; }
-.item-controls { display:flex; align-items:center; gap:8px; }
-.qty-btn { width:30px; height:30px; border-radius:50%; border:none; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-weight:bold; }
+/* 方块菜单样式 */
+.menu-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; padding:10px; }
+.menu-block { background:#16213e; border-radius:10px; border:1px solid #2a2a4a; padding:8px 6px; display:flex; flex-direction:column; align-items:center; cursor:pointer; position:relative; min-height:90px; }
+.menu-block.selected { border-color:#e94560; background:#2a1a2e; }
+.block-name { font-size:12px; font-weight:bold; text-align:center; line-height:1.3; margin-bottom:4px; }
+.block-price { font-size:11px; color:#f5a623; margin-bottom:6px; }
+.block-controls { display:flex; align-items:center; gap:6px; }
+.qty-btn { width:24px; height:24px; border-radius:50%; border:none; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-weight:bold; }
 .qty-minus { background:#333; color:#fff; }
 .qty-plus { background:#e94560; color:#fff; }
-.qty-num { font-size:16px; font-weight:bold; min-width:20px; text-align:center; }
-.note-input { width:100%; background:#16213e; border:1px solid #333; border-radius:8px; color:#fff; padding:8px 12px; font-size:14px; margin-top:8px; display:none; }
-.note-btn { font-size:12px; color:#4a90e2; cursor:pointer; margin-top:4px; display:inline-block; }
+.qty-num { font-size:14px; font-weight:bold; min-width:16px; text-align:center; }
+.qty-badge { position:absolute; top:4px; right:4px; background:#e94560; color:#fff; border-radius:50%; width:18px; height:18px; font-size:10px; display:flex; align-items:center; justify-content:center; font-weight:bold; }
+.note-btn { font-size:10px; color:#4a90e2; cursor:pointer; margin-top:3px; }
+.note-input { width:100%; background:#0d1117; border:1px solid #333; border-radius:6px; color:#fff; padding:5px 8px; font-size:12px; margin-top:5px; display:none; }
 
-.bottom-bar { position:fixed; bottom:0; left:0; right:0; background:#16213e; border-top:1px solid #0f3460; padding:12px 16px; z-index:100; }
-.order-summary { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-size:14px; color:#888; }
-.order-total { font-size:18px; font-weight:bold; color:#f5a623; }
-.note-global { width:100%; background:#1a1a2e; border:1px solid #333; border-radius:8px; color:#fff; padding:8px 12px; font-size:14px; margin-bottom:8px; }
-.confirm-btn { width:100%; padding:14px; background:linear-gradient(135deg,#e94560,#c0392b); color:#fff; border:none; border-radius:12px; font-size:17px; font-weight:bold; cursor:pointer; }
+.bottom-bar { position:fixed; bottom:0; left:0; right:0; background:#16213e; border-top:1px solid #0f3460; padding:10px 16px; z-index:100; }
+.order-summary { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-size:13px; color:#888; }
+.order-total { font-size:17px; font-weight:bold; color:#f5a623; }
+.note-global { width:100%; background:#1a1a2e; border:1px solid #333; border-radius:8px; color:#fff; padding:7px 12px; font-size:13px; margin-bottom:7px; }
+.confirm-btn { width:100%; padding:13px; background:linear-gradient(135deg,#e94560,#c0392b); color:#fff; border:none; border-radius:12px; font-size:16px; font-weight:bold; cursor:pointer; }
 .confirm-btn:disabled { background:#333; color:#666; }
 </style>
 </head>
 <body>
-
 <div class="header">
   <span class="back-btn" onclick="location.href='/'">←</span>
   <div class="header-info">
@@ -63,25 +59,22 @@ body { font-family: 'PingFang SC', sans-serif; background:#1a1a2e; color:#fff; m
   </div>
 </div>
 
-<!-- 账单区域（有订单时显示）-->
 <div class="bill-area" id="bill-area" style="display:none;">
   <div class="bill-inner">
-    <div class="bill-title" id="bill-title">📋 当前账单 / Aktuelle Rechnung</div>
+    <div class="bill-title">📋 当前账单 / Aktuelle Rechnung</div>
     <div id="bill-items"></div>
     <div class="bill-total-row">
-      <span id="bill-total-label">合计 / Gesamt</span>
+      <span>合计 / Gesamt</span>
       <span id="bill-total-amount">€ 0.00</span>
     </div>
-    <button class="checkout-btn" onclick="checkout()" id="checkout-btn">✅ 已结账 / Bezahlt</button>
+    <button class="checkout-btn" onclick="checkout()">✅ 已结账 / Bezahlt</button>
   </div>
   <div class="add-more-bar">➕ 继续加菜 / Weitere Bestellungen</div>
 </div>
 
-<!-- 菜单 -->
 <div class="category-tabs" id="cat-tabs"></div>
 <div id="menu-content"></div>
 
-<!-- 底部结算栏 -->
 <div class="bottom-bar">
   <div class="order-summary">
     <span id="item-count">已选 0 项</span>
@@ -100,54 +93,27 @@ let currentCat = 'drinks';
 let currentDrinkSub = 'all';
 let currentLang = 'zh';
 
-const i18n = {
-  zh: { bill:'📋 当前账单', total:'合计', checkout:'✅ 已结账', addmore:'➕ 继续加菜', order:'确认下单', note:'备注', occupied:'桌台占用中', free:'空闲桌台' },
-  de: { bill:'📋 Aktuelle Rechnung', total:'Gesamt', checkout:'✅ Bezahlt', addmore:'➕ Weitere Bestellungen', order:'Bestellen', note:'Bemerkung', occupied:'Tisch besetzt', free:'Tisch frei' },
-  en: { bill:'📋 Current Bill', total:'Total', checkout:'✅ Paid', addmore:'➕ Add more', order:'Order', note:'Note', occupied:'Table occupied', free:'Table free' },
-};
+try { currentLang = localStorage.getItem('lang') || 'zh'; } catch(e) {}
 
 const categories = {
-  drinks: { zh:'酒水', de:'Getränke', en:'Drinks' },
-  starters: { zh:'前菜', de:'Vorspeisen', en:'Starters' },
-  mains: { zh:'主食', de:'Hauptgerichte', en:'Mains' },
-  desserts: { zh:'甜品', de:'Desserts', en:'Desserts' },
-  lunch: { zh:'午市套餐', de:'Mittagsmenü', en:'Lunch Set' },
+  drinks:   { zh:'酒水',     de:'Getränke',      en:'Drinks'    },
+  starters: { zh:'前菜',     de:'Vorspeisen',    en:'Starters'  },
+  mains:    { zh:'主食',     de:'Hauptgerichte', en:'Mains'     },
+  desserts: { zh:'甜品',     de:'Desserts',      en:'Desserts'  },
+  lunch:    { zh:'午市套餐', de:'Mittagsmenü',   en:'Lunch Set' },
 };
+
 const drinkSubs = {
-  all:{zh:'全部',de:'Alle',en:'All'},
-  beer:{zh:'啤酒',de:'Bier',en:'Beer'},
-  wine:{zh:'葡萄酒',de:'Wein',en:'Wine'},
-  sake:{zh:'清酒',de:'Sake',en:'Sake'},
-  whisky:{zh:'威士忌',de:'Whisky',en:'Whisky'},
-  cocktail:{zh:'鸡尾酒',de:'Cocktails',en:'Cocktails'},
-  soft:{zh:'无酒精',de:'Alkoholfrei',en:'Soft'},
-  coffee:{zh:'咖啡',de:'Kaffee',en:'Coffee'},
-  homemade:{zh:'自制',de:'Hausgemacht',en:'Homemade'},
+  all:      { zh:'全部',   de:'Alle',         en:'All'       },
+  homemade: { zh:'自制',   de:'Hausgemacht',  en:'Homemade'  },
+  beer:     { zh:'啤酒',   de:'Bier',         en:'Beer'      },
+  wine:     { zh:'葡萄酒', de:'Wein',         en:'Wine'      },
+  sake:     { zh:'清酒',   de:'Sake',         en:'Sake'      },
+  whisky:   { zh:'威士忌', de:'Whisky',       en:'Whisky'    },
+  cocktail: { zh:'鸡尾酒', de:'Cocktails',    en:'Cocktails' },
+  soft:     { zh:'无酒精', de:'Alkoholfrei',  en:'Soft'      },
+  coffee:   { zh:'咖啡',   de:'Kaffee',       en:'Coffee'    },
 };
-
-// 读取父页面语言设置
-try {
-  currentLang = localStorage.getItem('lang') || 'zh';
-} catch(e) {}
-
-function setLang(lang) {
-  currentLang = lang;
-  try { localStorage.setItem('lang', lang); } catch(e) {}
-  updateLangUI();
-}
-
-function updateLangUI() {
-  const t = i18n[currentLang];
-  document.getElementById('bill-title').textContent = t.bill;
-  document.getElementById('bill-total-label').textContent = t.total;
-  document.getElementById('checkout-btn').textContent = t.checkout;
-  document.querySelector('.add-more-bar').textContent = t.addmore;
-  document.getElementById('confirm-btn').textContent = t.order + ' / Bestellen';
-  const sub = tableInfo.status === 'occupied' ? t.occupied : t.free;
-  document.getElementById('table-subtitle').textContent = sub;
-  renderTabs();
-  renderMenu(currentCat);
-}
 
 async function init() {
   const [tableRes, menuRes] = await Promise.all([
@@ -157,16 +123,13 @@ async function init() {
   const tableData = await tableRes.json();
   tableInfo = tableData.table;
   const existingOrders = tableData.orders;
-
   document.getElementById('table-title').textContent = tableInfo.name;
   document.getElementById('table-subtitle').textContent = tableInfo.status === 'occupied' ? '桌台占用中' : '空闲桌台';
-
   const items = await menuRes.json();
   items.forEach(item => {
     if (!menuData[item.category]) menuData[item.category] = [];
     menuData[item.category].push(item);
   });
-
   renderBill(existingOrders);
   renderTabs();
   renderMenu(currentCat);
@@ -203,56 +166,70 @@ function renderMenu(cat) {
         currentDrinkSub = key;
         document.querySelectorAll('.sub-tab').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        renderMenuItems(content, cat, key);
+        renderGrid(content, cat, key);
       };
       subTabs.appendChild(btn);
     });
     content.appendChild(subTabs);
-    renderMenuItems(content, cat, currentDrinkSub);
+    renderGrid(content, cat, currentDrinkSub);
   } else {
-    renderMenuItems(content, cat, 'all');
+    renderGrid(content, cat, 'all');
   }
 }
 
-function renderMenuItems(container, cat, sub) {
-  container.querySelectorAll('.menu-item').forEach(e => e.remove());
+function renderGrid(container, cat, sub) {
+  container.querySelectorAll('.menu-grid').forEach(e => e.remove());
   const items = menuData[cat] || [];
   const filtered = sub === 'all' ? items : items.filter(i => i.subcategory === sub);
+  const grid = document.createElement('div');
+  grid.className = 'menu-grid';
   filtered.forEach(item => {
-    const el = document.createElement('div');
-    el.className = 'menu-item';
     const qty = cart[item.id] ? cart[item.id].qty : 0;
     const displayName = currentLang === 'zh' ? item.name : (item.name_de || item.name);
-    const subName = currentLang === 'zh' ? item.name_de : item.name;
-    el.innerHTML = `
-      <div class="item-info">
-        <div class="item-name">${displayName}</div>
-        <div class="item-name-de">${subName}</div>
-        <span class="note-btn" onclick="toggleNote(${item.id})">+ 备注</span>
-        <input class="note-input" id="note-${item.id}" type="text" placeholder="备注...">
-      </div>
-      <div class="item-price">€${item.price.toFixed(2)}</div>
-      <div class="item-controls">
-        <button class="qty-btn qty-minus" onclick="changeQty(${item.id},-1,'${item.name}',${item.price},'${item.category}','${item.name_de}')">−</button>
+    const block = document.createElement('div');
+    block.className = `menu-block ${qty > 0 ? 'selected' : ''}`;
+    block.id = `block-${item.id}`;
+    block.innerHTML = `
+      ${qty > 0 ? `<div class="qty-badge">${qty}</div>` : ''}
+      <div class="block-name">${displayName}</div>
+      <div class="block-price">€${item.price.toFixed(2)}</div>
+      <div class="block-controls">
+        <button class="qty-btn qty-minus" onclick="changeQty(event,${item.id},-1,'${item.name}',${item.price},'${item.category}','${(item.name_de||'').replace(/'/g,"\\'")}')">−</button>
         <span class="qty-num" id="qty-${item.id}">${qty}</span>
-        <button class="qty-btn qty-plus" onclick="changeQty(${item.id},1,'${item.name}',${item.price},'${item.category}','${item.name_de}')">+</button>
-      </div>`;
-    container.appendChild(el);
+        <button class="qty-btn qty-plus" onclick="changeQty(event,${item.id},1,'${item.name}',${item.price},'${item.category}','${(item.name_de||'').replace(/'/g,"\\'")}')">+</button>
+      </div>
+      <span class="note-btn" onclick="toggleNote(event,${item.id})">📝 备注</span>
+      <input class="note-input" id="note-${item.id}" type="text" placeholder="备注内容...">
+    `;
+    grid.appendChild(block);
   });
+  container.appendChild(grid);
 }
 
-function toggleNote(id) {
+function toggleNote(e, id) {
+  e.stopPropagation();
   const el = document.getElementById(`note-${id}`);
   el.style.display = el.style.display === 'block' ? 'none' : 'block';
   if (el.style.display === 'block') el.focus();
 }
 
-function changeQty(id, delta, name, price, category, name_de) {
+function changeQty(e, id, delta, name, price, category, name_de) {
+  e.stopPropagation();
   if (!cart[id]) cart[id] = {id, name, name_de:name_de||name, price, qty:0, category:category||''};
   cart[id].qty = Math.max(0, cart[id].qty + delta);
   if (cart[id].qty === 0) delete cart[id];
-  const el = document.getElementById(`qty-${id}`);
-  if (el) el.textContent = cart[id] ? cart[id].qty : 0;
+  const qty = cart[id] ? cart[id].qty : 0;
+  const qtyEl = document.getElementById(`qty-${id}`);
+  if (qtyEl) qtyEl.textContent = qty;
+  const block = document.getElementById(`block-${id}`);
+  if (block) {
+    block.className = `menu-block ${qty > 0 ? 'selected' : ''}`;
+    let badge = block.querySelector('.qty-badge');
+    if (qty > 0) {
+      if (!badge) { badge = document.createElement('div'); badge.className = 'qty-badge'; block.insertBefore(badge, block.firstChild); }
+      badge.textContent = qty;
+    } else if (badge) badge.remove();
+  }
   updateSummary();
 }
 
@@ -268,33 +245,23 @@ function updateSummary() {
 function renderBill(orders) {
   const area = document.getElementById('bill-area');
   if (!orders || orders.length === 0) { area.style.display='none'; return; }
-  
   let allItems = [];
   orders.forEach(o => {
     const items = typeof o.items === 'string' ? JSON.parse(o.items) : o.items;
     items.forEach(i => allItems.push(i));
   });
-  
   const grouped = {};
   allItems.forEach(i => {
     if (!grouped[i.name]) grouped[i.name] = {...i, qty:0};
     grouped[i.name].qty += i.qty;
   });
-  
   const total = Object.values(grouped).reduce((s,i) => s+i.price*i.qty, 0);
-  const t = i18n[currentLang];
-  
   document.getElementById('bill-items').innerHTML = Object.values(grouped).map(i => `
     <div class="bill-item">
-      <span>${currentLang==='zh' ? i.name : (i.name_de||i.name)} × ${i.qty}</span>
+      <span>${i.name} × ${i.qty}${i.note ? ' 📝'+i.note : ''}</span>
       <span>€ ${(i.price*i.qty).toFixed(2)}</span>
-    </div>
-  `).join('');
-  
+    </div>`).join('');
   document.getElementById('bill-total-amount').textContent = `€ ${total.toFixed(2)}`;
-  document.getElementById('bill-title').textContent = t.bill;
-  document.getElementById('bill-total-label').textContent = t.total;
-  document.getElementById('checkout-btn').textContent = t.checkout;
   area.style.display = 'block';
 }
 
@@ -321,23 +288,23 @@ async function submitOrder() {
     updateSummary();
     renderMenu(currentCat);
     await init();
-    alert('✅ 下单成功！');
+    showToast('✅ 下单成功！');
   }
+}
+
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.style.cssText = 'position:fixed;top:70px;left:50%;transform:translateX(-50%);background:#27ae60;color:#fff;padding:10px 24px;border-radius:10px;font-size:14px;font-weight:bold;z-index:999;';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
 }
 
 async function checkout() {
-  if (!confirm('确认结账？桌台将重置为空闲。/ Bezahlung bestätigen?')) return;
+  if (!confirm('确认结账？/ Bezahlung bestätigen?')) return;
   await fetch(`/api/table/${tableId}/checkout`, {method:'POST'});
   location.href = '/';
 }
-
-// 读取并应用保存的语言
-try {
-  const savedLang = localStorage.getItem('lang');
-  if (savedLang && ['zh','de','en'].includes(savedLang)) {
-    currentLang = savedLang;
-  }
-} catch(e) {}
 
 init();
 </script>

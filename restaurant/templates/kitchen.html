@@ -310,11 +310,11 @@ async function markAllDone(orderId, tableName, cid) {
   sectionDone[orderId][cid] = true;
 
   // 通知后端
-  await fetch(`/api/order/${orderId}/complete`, {
+await fetch(`/api/order/${parseInt(orderId)}/complete`, {
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({type:'kitchen'})
-  });
+    body: JSON.stringify({type:'kitchen', section: cid})
+});
 }
 
 function urgentAlert(tableName) {

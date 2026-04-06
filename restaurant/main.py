@@ -426,7 +426,7 @@ def delete_menu_item(item_id):
 @login_required
 def kitchen_orders():
     conn = get_db()
-    orders = conn.execute('''SELECT * FROM orders WHERE status != "paid" AND kitchen_status = "pending" ORDER BY created_at ASC''').fetchall()
+    orders = conn.execute('''SELECT * FROM orders WHERE status != "paid" AND status != "kitchen_done" AND status != "done" ORDER BY created_at ASC''').fetchall()
     conn.close()
     result = []
     for o in orders:

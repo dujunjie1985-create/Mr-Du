@@ -32,7 +32,7 @@ body { font-family:'PingFang SC',sans-serif; background:#0d1117; color:#fff; min
 .order-item.done-item { opacity:0.3; text-decoration:line-through; }
 .item-qty { background:#e94560; color:#fff; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:bold; flex-shrink:0; }
 .item-name { flex:1; }
-.item-name-de { font-size:11px; color:#aaa; }
+.item-name-de { font-size:13px; color:#aaa; margin-top:2px; }
 .item-check { width:26px; height:26px; border-radius:50%; border:none; background:#27ae60; color:#fff; cursor:pointer; font-size:14px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
 .item-check.done { background:#333; }
 .item-note { font-size:11px; color:#f5a623; }
@@ -87,7 +87,8 @@ body { font-family:'PingFang SC',sans-serif; background:#0d1117; color:#fff; min
 <script>
 const socket = io();
 let pendingOrders = [];
-let doneOrders = []; // {id, table, time, timestamp, items, section}
+let doneOrders = [];
+const doneOrderIds = new Set(); // 记录已完成的 orderId-cid 组合
 
 function updateClock() { document.getElementById('clock').textContent = new Date().toLocaleTimeString('de-DE'); }
 setInterval(updateClock, 1000); updateClock();
@@ -222,6 +223,8 @@ function renderOrders(orders) {
 
     const makeCard = (items, container, cid) => {
       if (items.length === 0) return;
+      // 如果这一侧已确认完成，跳过不显示
+      if (doneOrderIds.has(`${t.id}-${cid}`)) return;
       const card = document.createElement('div');
       card.className = 'order-card';
       card.id = `card-${t.id}-${cid}`;
@@ -233,8 +236,8 @@ function renderOrders(orders) {
           <div class="order-item${done?' done-item':''}" id="item-row-${key.replace(/\s/g,'_')}">
             <span class="item-qty">${i.qty}</span>
             <div class="item-name">
-              <div>${i.name_de || i.name}</div>
-              <div class="item-name-de">${i.name !== i.name_de ? i.name : ''}</div>
+              <div style="font-size:20px;font-weight:bold;">${i.name}</div>
+              <div class="item-name-de">${i.name_de || ''}</div>
               ${i.note ? `<div class="item-note">📝 ${i.note}</div>` : ''}
               ${i.notes ? `<div class="item-note">📝 ${i.notes}</div>` : ''}
             </div>
@@ -290,6 +293,9 @@ function toggleItem(key, orderId, cid) {
 const sectionDone = {}; // key: orderId, value: {s: bool, m: bool}
 
 async function markAllDone(orderId, tableName, cid) {
+  // 记录到本地，防止刷新后重新出现
+  doneOrderIds.add(`${orderId}-${cid}`);
+  
   const card = document.getElementById(`card-${orderId}-${cid}`);
   if (card) {
     card.style.opacity='0'; card.style.transition='opacity 0.3s';
@@ -310,11 +316,11 @@ async function markAllDone(orderId, tableName, cid) {
   sectionDone[orderId][cid] = true;
 
   // 通知后端
-await fetch(`/api/order/${parseInt(orderId)}/complete`, {
+  await fetch(`/api/order/${orderId}/complete`, {
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({type:'kitchen', section: cid})
-});
+    body: JSON.stringify({type:'kitchen'})
+  });
 }
 
 function urgentAlert(tableName) {
@@ -406,12 +412,13 @@ socket.on('order_updated', data => {
 
 async function loadOrders() {
   const res = await fetch('/api/kitchen/orders');
-  pendingOrders = await res.json();
+  const allOrders = await res.json();
+  pendingOrders = allOrders;
   renderOrders(pendingOrders);
 }
 
 loadOrders();
-setInterval(loadOrders, 30000);
+setInterval(loadOrders, 5000);
 </script>
 </body>
 </html>

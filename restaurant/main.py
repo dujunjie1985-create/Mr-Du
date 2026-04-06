@@ -11,15 +11,10 @@ app.config['SECRET_KEY'] = 'restaurant2026_mrdu_secret'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 DB_PATH = 'restaurant.db'
-
-# ==================== 密码 ====================
 STAFF_PASSWORD = 'ramen2026'
 ADMIN_PASSWORD = 'djj19851204'
-
-# 连入设备追踪
 connected_devices = {}
 
-# ==================== 登录验证 ====================
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -38,7 +33,6 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated
 
-# ==================== 数据库 ====================
 def init_db():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
@@ -55,8 +49,6 @@ def init_db():
         zone TEXT,
         items TEXT,
         status TEXT DEFAULT 'pending',
-        kitchen_status TEXT DEFAULT 'pending',
-        bar_status TEXT DEFAULT 'pending',
         created_at TEXT,
         notes TEXT
     )''')
@@ -129,6 +121,18 @@ def init_db():
             ('drinks','coffee','阿芙佳朵','Affogato al caffe',4.50),
             ('drinks','coffee','红茶','Schwarzer Tee / Black Tea',3.80),
             ('drinks','coffee','绿茶','Gruener Tee / Green Tea',3.80),
+            ('drinks','homemade','冰茶蜜瓜 0.5l','Ice Tea Green Melon',5.90),
+            ('drinks','homemade','冰茶草莓 0.5l','Ice Tea Strawberry',5.90),
+            ('drinks','homemade','冰茶柠檬 0.5l','Ice Tea Lemon',5.90),
+            ('drinks','homemade','冰茶水蜜桃 0.5l','Ice Tea Peach',5.90),
+            ('drinks','homemade','冰茶荔枝 0.5l','Ice Tea Lychee',5.90),
+            ('drinks','homemade','冰茶苹果 0.5l','Ice Tea Apple',5.90),
+            ('drinks','homemade','柠檬水葡萄 0.5l','Lemonade Grape',5.50),
+            ('drinks','homemade','柠檬水百香果 0.5l','Lemonade Passion Fruit',5.50),
+            ('drinks','homemade','柠檬水芒果 0.5l','Lemonade Mango',5.50),
+            ('drinks','homemade','柠檬水橙子 0.5l','Lemonade Orange',5.50),
+            ('drinks','homemade','柠檬水蓝莓 0.5l','Lemonade Blueberry',5.50),
+            ('drinks','homemade','柠檬水柠檬 0.5l','Lemonade Lemon',5.50),
             ('drinks','soft','矿泉水 0.33l','Roemerquelle 0.33l',3.30),
             ('drinks','soft','矿泉水 0.75l','Roemerquelle 0.75l',5.70),
             ('drinks','soft','可乐 0.33l','Coca-Cola 0.33l',3.60),
@@ -142,18 +146,6 @@ def init_db():
             ('drinks','soft','苏打柠檬 0.25l','Soda Zitrone 0.25l',3.00),
             ('drinks','soft','卡尔必思 0.25l','Calpis 0.25l',4.20),
             ('drinks','soft','卡尔必思 0.5l','Calpis 0.5l',6.25),
-            ('drinks','homemade','冰茶蜜瓜 0.5l','Ice Tea Green Melon',5.90),
-            ('drinks','homemade','冰茶草莓 0.5l','Ice Tea Strawberry',5.90),
-            ('drinks','homemade','冰茶柠檬 0.5l','Ice Tea Lemon',5.90),
-            ('drinks','homemade','冰茶水蜜桃 0.5l','Ice Tea Peach',5.90),
-            ('drinks','homemade','冰茶荔枝 0.5l','Ice Tea Lychee',5.90),
-            ('drinks','homemade','冰茶苹果 0.5l','Ice Tea Apple',5.90),
-            ('drinks','homemade','柠檬水葡萄 0.5l','Lemonade Grape',5.50),
-            ('drinks','homemade','柠檬水百香果 0.5l','Lemonade Passion Fruit',5.50),
-            ('drinks','homemade','柠檬水芒果 0.5l','Lemonade Mango',5.50),
-            ('drinks','homemade','柠檬水橙子 0.5l','Lemonade Orange',5.50),
-            ('drinks','homemade','柠檬水蓝莓 0.5l','Lemonade Blueberry',5.50),
-            ('drinks','homemade','柠檬水柠檬 0.5l','Lemonade Lemon',5.50),
             ('drinks','sake','清酒 按需','Japanischer Sake auf Anfrage',0.00),
             ('starters','starters','毛豆','Edamame',4.90),
             ('starters','starters','黄瓜沙拉','Cucumber Salad / Gurkensalat',4.50),
@@ -191,7 +183,6 @@ def init_db():
             ('desserts','desserts','大福 5个','YAMAMOTOYA DAIFUKU',6.90),
             ('desserts','desserts','芝麻糯米团 5个','Reisknoedel mit Sesam',3.80),
             ('desserts','desserts','芒果西米露','Mango Sago',7.50),
-            # 午市套餐
             ('lunch','lunch','鸡肉面','Hühner-Nudelsuppe',9.90),
             ('lunch','lunch','猪肉面','Schweinefleisch-Nudelsuppe',10.90),
             ('lunch','lunch','素面','Vegetarische Nudelsuppe',10.90),
@@ -201,18 +192,6 @@ def init_db():
             ('lunch','lunch','冬阴功汤+猪肉饺子套餐','Tom Yum Suppe + Schweinefleisch-Teigtaschen',11.90),
         ]
         c.executemany('INSERT INTO menu (category, subcategory, name, name_de, price) VALUES (?, ?, ?, ?, ?)', default_menu)
-    
-    # 数据库迁移 - 自动添加缺失的列
-    try:
-        c.execute('ALTER TABLE orders ADD COLUMN kitchen_status TEXT DEFAULT "pending"')
-    except: pass
-    try:
-        c.execute('ALTER TABLE orders ADD COLUMN bar_status TEXT DEFAULT "pending"')
-    except: pass
-    # 把旧的 kitchen_done 状态迁移过来
-    c.execute('UPDATE orders SET kitchen_status="done" WHERE status="kitchen_done"')
-    c.execute('UPDATE orders SET bar_status="done" WHERE status="bar_done"')
-    
     conn.commit()
     conn.close()
 
@@ -220,31 +199,6 @@ def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
-
-# ==================== 密码 ====================
-STAFF_PASSWORD = 'ramen2026'
-ADMIN_PASSWORD = 'djj19851204'
-connected_devices = {}
-
-def login_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if not session.get('logged_in'):
-            return redirect('/login')
-        return f(*args, **kwargs)
-    return decorated
-
-def admin_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if not session.get('logged_in'):
-            return redirect('/login')
-        if session.get('role') != 'admin':
-            return redirect('/')
-        return f(*args, **kwargs)
-    return decorated
-
-# ==================== 路由 ====================
 
 @app.route('/login', methods=['GET','POST'])
 def login():
@@ -299,12 +253,14 @@ def bar():
 def admin():
     return render_template('admin.html')
 
+@app.route('/qr')
+def qr_page():
+    return render_template('qr.html')
+
 @app.route('/api/devices')
 @admin_required
 def get_devices():
     return jsonify(list(connected_devices.values()))
-
-# ==================== API ====================
 
 @app.route('/api/tables')
 @login_required
@@ -356,9 +312,9 @@ def complete_order(order_id):
     item_type = data.get('type','all')
     conn = get_db()
     if item_type == 'kitchen':
-        conn.execute('UPDATE orders SET kitchen_status="done" WHERE id=?', (order_id,))
+        conn.execute('UPDATE orders SET status="kitchen_done" WHERE id=?', (order_id,))
     elif item_type == 'bar':
-        conn.execute('UPDATE orders SET bar_status="done" WHERE id=?', (order_id,))
+        conn.execute('UPDATE orders SET status="bar_done" WHERE id=?', (order_id,))
     else:
         conn.execute('UPDATE orders SET status="done" WHERE id=?', (order_id,))
     conn.commit()
@@ -392,16 +348,6 @@ def swap_tables():
     socketio.emit('tables_swapped', {'from_id':from_id,'to_id':to_id})
     return jsonify({'success':True})
 
-@app.route('/api/menu/reset', methods=['POST'])
-@admin_required
-def reset_menu():
-    conn = get_db()
-    conn.execute('DELETE FROM menu')
-    conn.commit()
-    conn.close()
-    init_db()
-    return jsonify({'success': True, 'message': '菜单已重置'})
-
 @app.route('/api/menu/update', methods=['POST'])
 @admin_required
 def update_menu():
@@ -426,11 +372,21 @@ def delete_menu_item(item_id):
     conn.close()
     return jsonify({'success':True})
 
+@app.route('/api/menu/reset', methods=['POST'])
+@admin_required
+def reset_menu():
+    conn = get_db()
+    conn.execute('DELETE FROM menu')
+    conn.commit()
+    conn.close()
+    init_db()
+    return jsonify({'success':True})
+
 @app.route('/api/kitchen/orders')
 @login_required
 def kitchen_orders():
     conn = get_db()
-    orders = conn.execute('''SELECT * FROM orders WHERE status != "paid" AND kitchen_status = "pending" ORDER BY created_at ASC''').fetchall()
+    orders = conn.execute('''SELECT * FROM orders WHERE status = "pending" ORDER BY created_at ASC''').fetchall()
     conn.close()
     result = []
     for o in orders:
@@ -443,7 +399,7 @@ def kitchen_orders():
 @login_required
 def bar_orders():
     conn = get_db()
-    orders = conn.execute('''SELECT * FROM orders WHERE status != "paid" AND bar_status = "pending" ORDER BY created_at ASC''').fetchall()
+    orders = conn.execute('''SELECT * FROM orders WHERE status IN ("pending","kitchen_done") ORDER BY created_at ASC''').fetchall()
     conn.close()
     result = []
     for o in orders:
@@ -451,10 +407,6 @@ def bar_orders():
         od['items'] = json.loads(od['items'])
         result.append(od)
     return jsonify(result)
-
-if __name__ == '__main__':
-    # 账单历史 - 只管理员可查
-    pass
 
 @app.route('/api/orders/history')
 @admin_required
@@ -468,10 +420,6 @@ def orders_history():
         od['items'] = json.loads(od['items'])
         result.append(od)
     return jsonify(result)
-
-@app.route('/qr')
-def qr_page():
-    return render_template('qr.html')
 
 if __name__ == '__main__':
     init_db()

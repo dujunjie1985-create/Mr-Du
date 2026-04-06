@@ -351,9 +351,8 @@ def complete_order(order_id):
     data = request.json
     item_type = data.get('type','all')
     conn = get_db()
-    if item_type == 'kitchen':
-        conn.execute('UPDATE orders SET kitchen_status="done" WHERE id=?', (order_id,))
-    elif item_type == 'bar':
+if item_type == 'kitchen':
+conn.execute('UPDATE orders SET status="kitchen_done" WHERE id=?', (order_id,))    elif item_type == 'bar':
         conn.execute('UPDATE orders SET bar_status="done" WHERE id=?', (order_id,))
     else:
         conn.execute('UPDATE orders SET status="done" WHERE id=?', (order_id,))

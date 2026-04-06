@@ -352,10 +352,11 @@ def complete_order(order_id):
     item_type = data.get('type','all')
     conn = get_db()
 if item_type == 'kitchen':
-conn.execute('UPDATE orders SET status="kitchen_done" WHERE id=?', (order_id,))    elif item_type == 'bar':
-        conn.execute('UPDATE orders SET bar_status="done" WHERE id=?', (order_id,))
-    else:
-        conn.execute('UPDATE orders SET status="done" WHERE id=?', (order_id,))
+conn.execute('UPDATE orders SET status="kitchen_done" WHERE id=?', (order_id,))
+elif item_type == 'bar':
+conn.execute('UPDATE orders SET bar_status="done" WHERE id=?', (order_id,))
+else:
+conn.execute('UPDATE orders SET status="done" WHERE id=?', (order_id,))
     conn.commit()
     conn.close()
     socketio.emit('order_updated', {'order_id':order_id,'type':item_type})

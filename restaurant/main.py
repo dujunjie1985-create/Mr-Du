@@ -357,6 +357,8 @@ elif item_type == 'bar':
 conn.execute('UPDATE orders SET bar_status="done" WHERE id=?', (order_id,))
 else:
 conn.execute('UPDATE orders SET status="done" WHERE id=?', (order_id,))
+else:
+conn.execute('UPDATE orders SET status="done" WHERE id=?', (order_id,))
     conn.commit()
     conn.close()
     socketio.emit('order_updated', {'order_id':order_id,'type':item_type})

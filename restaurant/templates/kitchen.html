@@ -298,7 +298,7 @@ async function markAllDone(orderId, tableName, cid) {
     timestamp: Date.now(), cid
   });
   Object.keys(itemsDone).forEach(k => { if (k.startsWith(`${orderId}-${cid}`)) delete itemsDone[k]; });
-  await fetch(`/api/order/${orderId}/complete`, {
+  await fetch(`/api/order/${parseInt(orderId)}/complete`, {
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body: JSON.stringify({type:'kitchen'})

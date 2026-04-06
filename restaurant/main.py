@@ -309,6 +309,7 @@ def place_order():
 def complete_order(order_id):
     data = request.json
     item_type = data.get('type','all')
+    print(f"[COMPLETE] order_id={order_id} type={item_type}", flush=True)
     conn = get_db()
     if item_type == 'kitchen':
         conn.execute('UPDATE orders SET status="kitchen_done" WHERE id=?', (order_id,))
@@ -317,6 +318,9 @@ def complete_order(order_id):
     else:
         conn.execute('UPDATE orders SET status="done" WHERE id=?', (order_id,))
     conn.commit()
+    # 验证更新成功
+    updated = conn.execute('SELECT status FROM orders WHERE id=?', (order_id,)).fetchone()
+    print(f"[COMPLETE] after update status={updated['status'] if updated else 'NOT FOUND'}", flush=True)
     conn.close()
     socketio.emit('order_updated', {'order_id':order_id,'type':item_type})
     return jsonify({'success':True})

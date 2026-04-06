@@ -386,7 +386,6 @@ def reset_menu():
     return jsonify({'success':True})
 
 @app.route('/api/kitchen/orders')
-@login_required
 def kitchen_orders():
     conn = get_db()
     orders = conn.execute('''SELECT * FROM orders WHERE status = "pending" ORDER BY created_at ASC''').fetchall()

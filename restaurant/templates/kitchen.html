@@ -283,7 +283,7 @@ function toggleItem(key, orderId, cid) {
   playSound('done');
 }
 
-function markAllDone(orderId, tableName, cid) {
+async function markAllDone(orderId, tableName, cid) {
   const card = document.getElementById(`card-${orderId}-${cid}`);
   if (card) {
     card.style.opacity='0'; card.style.transition='opacity 0.3s';
@@ -297,10 +297,13 @@ function markAllDone(orderId, tableName, cid) {
     time: new Date().toLocaleTimeString('de-DE'),
     timestamp: Date.now(), cid
   });
-  // 清理该卡的itemsDone
   Object.keys(itemsDone).forEach(k => { if (k.startsWith(`${orderId}-${cid}`)) delete itemsDone[k]; });
+  await fetch(`/api/order/${orderId}/complete`, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({type:'kitchen'})
+  });
 }
-
 function urgentAlert(tableName) {
   playSound('urgent');
   showToast(`⚡ 加急：${tableName}！`, '#f5a623');

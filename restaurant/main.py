@@ -201,6 +201,14 @@ def init_db():
             ('lunch','lunch','冬阴功汤+猪肉饺子套餐','Tom Yum Suppe + Schweinefleisch-Teigtaschen',11.90),
         ]
         c.executemany('INSERT INTO menu (category, subcategory, name, name_de, price) VALUES (?, ?, ?, ?, ?)', default_menu)
+    try:
+        c.execute('ALTER TABLE orders ADD COLUMN kitchen_status TEXT DEFAULT "pending"')
+    except: pass
+    try:
+        c.execute('ALTER TABLE orders ADD COLUMN bar_status TEXT DEFAULT "pending"')
+    except: pass
+    c.execute('UPDATE orders SET kitchen_status="done" WHERE status="kitchen_done"')
+    c.execute('UPDATE orders SET bar_status="done" WHERE status="bar_done"')
     conn.commit()
     conn.close()
 

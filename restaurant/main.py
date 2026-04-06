@@ -201,14 +201,18 @@ def init_db():
             ('lunch','lunch','冬阴功汤+猪肉饺子套餐','Tom Yum Suppe + Schweinefleisch-Teigtaschen',11.90),
         ]
         c.executemany('INSERT INTO menu (category, subcategory, name, name_de, price) VALUES (?, ?, ?, ?, ?)', default_menu)
+    
+    # 数据库迁移 - 自动添加缺失的列
     try:
         c.execute('ALTER TABLE orders ADD COLUMN kitchen_status TEXT DEFAULT "pending"')
     except: pass
     try:
         c.execute('ALTER TABLE orders ADD COLUMN bar_status TEXT DEFAULT "pending"')
     except: pass
+    # 把旧的 kitchen_done 状态迁移过来
     c.execute('UPDATE orders SET kitchen_status="done" WHERE status="kitchen_done"')
     c.execute('UPDATE orders SET bar_status="done" WHERE status="bar_done"')
+    
     conn.commit()
     conn.close()
 
@@ -347,7 +351,20 @@ def place_order():
 
 @app.route('/api/order/<int:order_id>/complete', methods=['POST'])
 @login_required
-complete_order
+def complete_order(order_id):
+    data = request.json
+    item_type = data.get('type','all')
+    conn = get_db()
+    if item_type == 'kitchen':
+        conn.execute('UPDATE orders SET kitchen_status="done" WHERE id=?', (order_id,))
+    elif item_type == 'bar':
+        conn.execute('UPDATE orders SET bar_status="done" WHERE id=?', (order_id,))
+    else:
+        conn.execute('UPDATE orders SET status="done" WHERE id=?', (order_id,))
+    conn.commit()
+    conn.close()
+    socketio.emit('order_updated', {'order_id':order_id,'type':item_type})
+    return jsonify({'success':True})
 
 @app.route('/api/table/<int:table_id>/checkout', methods=['POST'])
 @login_required
@@ -413,7 +430,7 @@ def delete_menu_item(item_id):
 @login_required
 def kitchen_orders():
     conn = get_db()
-    orders = conn.execute('''SELECT * FROM orders WHERE status != "paid" AND status != "kitchen_done" AND status != "done" ORDER BY created_at ASC''').fetchall()
+    orders = conn.execute('''SELECT * FROM orders WHERE status != "paid" AND kitchen_status = "pending" ORDER BY created_at ASC''').fetchall()
     conn.close()
     result = []
     for o in orders:

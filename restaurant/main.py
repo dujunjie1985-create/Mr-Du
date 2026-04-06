@@ -311,8 +311,11 @@ def complete_order(order_id):
     item_type = data.get('type','all')
     print(f"[COMPLETE] order_id={order_id} type={item_type}", flush=True)
     conn = get_db()
-    if item_type == 'kitchen':
+  if item_type == 'kitchen':
+    data_section = data.get('section', 'all')
+    if data_section == 'all':
         conn.execute('UPDATE orders SET status="kitchen_done" WHERE id=?', (order_id,))
+    # 只消失该侧，不更新数据库状态
     elif item_type == 'bar':
         conn.execute('UPDATE orders SET status="bar_done" WHERE id=?', (order_id,))
     else:

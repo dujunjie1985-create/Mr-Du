@@ -49,6 +49,8 @@ def init_db():
         zone TEXT,
         items TEXT,
         status TEXT DEFAULT 'pending',
+        starter_done INTEGER DEFAULT 0,
+        main_done INTEGER DEFAULT 0,
         created_at TEXT,
         notes TEXT
     )''')
@@ -309,23 +311,31 @@ def place_order():
 def complete_order(order_id):
     data = request.json
     item_type = data.get('type','all')
-    print(f"[COMPLETE] order_id={order_id} type={item_type}", flush=True)
+    section = data.get('section', 'all')
     conn = get_db()
-  if item_type == 'kitchen':
-    data_section = data.get('section', 'all')
-    if data_section == 'all':
-        conn.execute('UPDATE orders SET status="kitchen_done" WHERE id=?', (order_id,))
-    # 只消失该侧，不更新数据库状态
+    try:
+        conn.execute('ALTER TABLE orders ADD COLUMN starter_done INTEGER DEFAULT 0')
+    except: pass
+    try:
+        conn.execute('ALTER TABLE orders ADD COLUMN main_done INTEGER DEFAULT 0')
+    except: pass
+    if item_type == 'kitchen':
+        if section == 's':
+            conn.execute('UPDATE orders SET starter_done=1 WHERE id=?', (order_id,))
+        elif section == 'm':
+            conn.execute('UPDATE orders SET main_done=1 WHERE id=?', (order_id,))
+        else:
+            conn.execute('UPDATE orders SET starter_done=1, main_done=1, status="kitchen_done" WHERE id=?', (order_id,))
+        order = conn.execute('SELECT starter_done, main_done FROM orders WHERE id=?', (order_id,)).fetchone()
+        if order and order['starter_done'] and order['main_done']:
+            conn.execute('UPDATE orders SET status="kitchen_done" WHERE id=?', (order_id,))
     elif item_type == 'bar':
         conn.execute('UPDATE orders SET status="bar_done" WHERE id=?', (order_id,))
     else:
         conn.execute('UPDATE orders SET status="done" WHERE id=?', (order_id,))
     conn.commit()
-    # 验证更新成功
-    updated = conn.execute('SELECT status FROM orders WHERE id=?', (order_id,)).fetchone()
-    print(f"[COMPLETE] after update status={updated['status'] if updated else 'NOT FOUND'}", flush=True)
     conn.close()
-    socketio.emit('order_updated', {'order_id':order_id,'type':item_type})
+    socketio.emit('order_updated', {'order_id':order_id,'type':item_type,'section':section})
     return jsonify({'success':True})
 
 @app.route('/api/table/<int:table_id>/checkout', methods=['POST'])
@@ -391,6 +401,12 @@ def reset_menu():
 @app.route('/api/kitchen/orders')
 def kitchen_orders():
     conn = get_db()
+    try:
+        conn.execute('ALTER TABLE orders ADD COLUMN starter_done INTEGER DEFAULT 0')
+    except: pass
+    try:
+        conn.execute('ALTER TABLE orders ADD COLUMN main_done INTEGER DEFAULT 0')
+    except: pass
     orders = conn.execute('''SELECT * FROM orders WHERE status = "pending" ORDER BY created_at ASC''').fetchall()
     conn.close()
     result = []

@@ -223,7 +223,10 @@ function renderOrders(orders) {
 
     const makeCard = (items, container, cid) => {
       if (items.length === 0) return;
-      // 如果这一侧已确认完成，跳过不显示
+      // 根据数据库字段判断是否已完成
+      if (cid === 's' && t.starter_done) return;
+      if (cid === 'm' && t.main_done) return;
+      // 本地已完成也跳过
       if (doneOrderIds.has(`${t.id}-${cid}`)) return;
       const card = document.createElement('div');
       card.className = 'order-card';
@@ -406,7 +409,12 @@ socket.on('new_order', data => {
   loadOrders();
 });
 socket.on('order_updated', data => {
-  // 其他设备收到广播后重新加载
+  if (data.type === 'kitchen' && data.section) {
+    doneOrderIds.add(`${data.order_id}-${data.section}`);
+  } else if (data.type === 'kitchen') {
+    doneOrderIds.add(`${data.order_id}-s`);
+    doneOrderIds.add(`${data.order_id}-m`);
+  }
   loadOrders();
 });
 

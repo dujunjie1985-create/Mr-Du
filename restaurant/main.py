@@ -300,7 +300,10 @@ def get_menu():
         d['category'] = cat_map.get(d['category'], d['category'])
         d['subcategory'] = cat_map.get(d['subcategory'], d['subcategory'])
         result.append(d)
-    return jsonify(result)
+    from flask import make_response
+    resp = make_response(jsonify(result))
+    resp.headers['Cache-Control'] = 'public, max-age=300'
+    return resp
 
 @app.route('/api/order', methods=['POST'])
 @login_required

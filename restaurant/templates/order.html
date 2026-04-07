@@ -193,14 +193,14 @@ body { font-family:'PingFang SC','Hiragino Sans',sans-serif; background:#0a1628;
 // 樱花
 function createPetals() {
   const c = document.getElementById('sakura');
-  for (let i=0;i<10;i++) {
+  for (let i=0;i<6;i++) {
     const p = document.createElement('div');
     p.className='petal';
     p.textContent=['🌸','🌺','🌼'][Math.floor(Math.random()*3)];
     p.style.left=Math.random()*100+'%';
     p.style.fontSize=(8+Math.random()*10)+'px';
-    p.style.animationDuration=(8+Math.random()*10)+'s';
-    p.style.animationDelay=(Math.random()*8)+'s';
+    p.style.animationDuration=(10+Math.random()*12)+'s';
+    p.style.animationDelay=(Math.random()*10)+'s';
     c.appendChild(p);
   }
 }
@@ -235,12 +235,34 @@ const mainsSubs = {
 };
 
 async function init() {
-  const [tRes,mRes] = await Promise.all([fetch(`/api/table/${tableId}`),fetch('/api/menu')]);
+  const [tRes] = await Promise.all([fetch(`/api/table/${tableId}`)]);
   const td = await tRes.json();
   tableInfo = td.table;
   document.getElementById('table-title').textContent = '🍜 '+tableInfo.name;
   document.getElementById('table-subtitle').textContent = tableInfo.status==='occupied'?'桌台占用中':'空闲桌台';
-  const items = await mRes.json();
+  
+  // 菜单缓存 - 只在第一次或缓存过期时拉取
+  const cacheKey = 'menuCache';
+  const cacheTime = 'menuCacheTime';
+  const now = Date.now();
+  let items;
+  try {
+    const cached = localStorage.getItem(cacheKey);
+    const cachedTime = localStorage.getItem(cacheTime);
+    if (cached && cachedTime && (now - parseInt(cachedTime)) < 5*60*1000) {
+      items = JSON.parse(cached);
+    } else {
+      const mRes = await fetch('/api/menu');
+      items = await mRes.json();
+      localStorage.setItem(cacheKey, JSON.stringify(items));
+      localStorage.setItem(cacheTime, now.toString());
+    }
+  } catch(e) {
+    const mRes = await fetch('/api/menu');
+    items = await mRes.json();
+  }
+  
+  menuData = {};
   items.forEach(item => {
     if (!menuData[item.category]) menuData[item.category]={};
     const sub = item.subcategory||item.category;
@@ -248,7 +270,7 @@ async function init() {
     menuData[item.category][sub].push(item);
   });
   renderBill(td.orders);
-  showCategories();
+  if (!currentCat) showCategories();
 }
 
 function showCategories() {

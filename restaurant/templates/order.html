@@ -267,6 +267,8 @@ createPetals();
 
 const tableId = parseInt(window.location.pathname.split('/').pop());
 let tableInfo={}, menuData={}, cart={}, noteTargetId=null;
+let currentLang = 'zh';
+try { currentLang = localStorage.getItem('lang') || 'zh'; } catch(e) {}
 let currentCat=null, currentSub=null;
 
 const categories = {
@@ -371,11 +373,12 @@ function showItems(cat, sub) {
   document.getElementById('main-content').innerHTML = '<div class="blocks-grid">'+
     items.map(item=>{
       const qty=cart[item.id]?cart[item.id].qty:0;
+      const displayName = currentLang === 'zh' ? item.name : (item.name_de || item.name);
       return `<div class="menu-block ${qty>0?'selected':''}" id="block-${item.id}">
         ${qty>0?`<div class="qty-badge">${qty}</div>`:''}
-        <div class="block-name">${item.name}</div>
+        <div class="block-name">${displayName}</div>
         <div class="block-price">€${item.price.toFixed(2)}</div>
-        <div class="block-note-btn" onclick="openNote(event,${item.id},'${item.name.replace(/'/g,"\\'")}')">📝 备注</div>
+        <div class="block-note-btn" onclick="openNote(event,${item.id},'${displayName.replace(/'/g,"\\'")}')">📝 备注</div>
       </div>`;
     }).join('')+'</div>';
   items.forEach(item=>{
@@ -463,6 +466,12 @@ function updateSummary() {
   document.getElementById('confirm-btn').disabled=count===0;
 }
 
+function getItemDisplayName(item) {
+  if (currentLang === 'zh') return item.name;
+  if (currentLang === 'de' || currentLang === 'en') return item.name_de || item.name;
+  return item.name;
+}
+
 function renderBill(orders) {
   const area=document.getElementById('bill-area');
   if (!orders||orders.length===0){area.style.display='none';return;}
@@ -481,11 +490,12 @@ function renderBill(orders) {
   const container=document.getElementById('bill-items');
   container.innerHTML='';
   Object.values(grouped).forEach(i=>{
+    const displayName = getItemDisplayName(i);
     const row=document.createElement('div');
     row.className='bill-item-wrap';
     row.innerHTML=`<div class="bill-item-delete">🗑️</div>
       <div class="bill-item">
-        <span>${i.name} × ${i.qty}${i.note?' 📝'+i.note:''}</span>
+        <span>${displayName} × ${i.qty}${i.note?' 📝'+i.note:''}</span>
         <span>€ ${(i.price*i.qty).toFixed(2)}</span>
       </div>`;
     const bi=row.querySelector('.bill-item'), db=row.querySelector('.bill-item-delete');
@@ -497,7 +507,7 @@ function renderBill(orders) {
       if (dx>10){bi.style.transform='';db.style.display='none';}
     });
     db.addEventListener('click',async()=>{
-      if (!confirm(`删除 ${i.name}？`)) return;
+      if (!confirm(`删除 ${displayName}？`)) return;
       await fetch(`/api/order/${i.orderIds[0]}/delete_item`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({item_name:i.name})});
       await init();
     });

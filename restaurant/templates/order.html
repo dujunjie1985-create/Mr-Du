@@ -6,85 +6,146 @@
 <title>点餐</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
-body { font-family:'PingFang SC',sans-serif; background:#1a1a2e; color:#fff; min-height:100vh; padding-bottom:160px; }
+body { font-family:'PingFang SC','Hiragino Sans',sans-serif; background:#0a1628; color:#f0e6d3; min-height:100vh; padding-bottom:160px; }
 
-.header { background:linear-gradient(135deg,#16213e,#0f3460); padding:12px 16px; display:flex; align-items:center; gap:12px; position:sticky; top:0; z-index:50; box-shadow:0 2px 10px rgba(0,0,0,0.4); }
-.back-btn { font-size:22px; cursor:pointer; }
-.header-info h2 { font-size:17px; color:#e94560; }
-.header-info p { font-size:12px; color:#888; }
+/* 浮世绘背景 */
+.bg-fixed {
+  position:fixed; top:0; left:0; width:100%; height:100%; z-index:0;
+  background:linear-gradient(180deg,#0a1628 0%,#1a2744 40%,#2d4a8a 70%,#1a3366 100%);
+  pointer-events:none;
+}
+.fuji-bg {
+  position:fixed; bottom:0; left:0; width:100%; z-index:1; pointer-events:none; opacity:0.4;
+}
+.sakura-layer { position:fixed; top:0; left:0; width:100%; height:100%; z-index:2; pointer-events:none; overflow:hidden; }
+.petal { position:absolute; top:-20px; animation:fall linear infinite; font-size:14px; opacity:0.7; }
+@keyframes fall { 0%{transform:translateY(-20px) rotate(0deg);opacity:0.7} 100%{transform:translateY(100vh) rotate(360deg);opacity:0} }
+
+/* 主内容层 */
+.content { position:relative; z-index:10; }
+
+/* 头部 */
+.header {
+  background:rgba(10,22,40,0.9);
+  border-bottom:2px solid #c0392b;
+  padding:12px 16px;
+  display:flex; align-items:center; gap:12px;
+  position:sticky; top:0; z-index:50;
+  backdrop-filter:blur(10px);
+}
+.back-btn { font-size:22px; cursor:pointer; color:#a89070; }
+.header-info h2 { font-size:17px; color:#f5c842; letter-spacing:1px; }
+.header-info p { font-size:12px; color:#a89070; }
 
 /* 账单 */
-.bill-area { background:#16213e; border-bottom:2px solid #e94560; }
+.bill-area { background:rgba(10,22,40,0.9); border-bottom:2px solid #c0392b; backdrop-filter:blur(5px); }
 .bill-inner { padding:12px 16px; }
-.bill-title { font-size:14px; font-weight:bold; color:#f5a623; margin-bottom:8px; }
+.bill-title { font-size:14px; font-weight:bold; color:#f5c842; margin-bottom:8px; }
 .bill-item-wrap { position:relative; overflow:hidden; }
-.bill-item { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #1a1a2e; font-size:13px; transition:transform 0.2s; background:#16213e; position:relative; z-index:1; }
-.bill-item-delete { position:absolute; right:0; top:0; bottom:0; width:60px; background:#e94560; color:#fff; display:none; align-items:center; justify-content:center; font-size:20px; cursor:pointer; z-index:0; }
-.bill-total-row { display:flex; justify-content:space-between; padding:8px 0 4px; font-size:16px; font-weight:bold; color:#f5a623; }
+.bill-item { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.08); font-size:13px; transition:transform 0.2s; background:transparent; position:relative; z-index:1; color:#f0e6d3; }
+.bill-item-delete { position:absolute; right:0; top:0; bottom:0; width:60px; background:#c0392b; color:#fff; display:none; align-items:center; justify-content:center; font-size:20px; cursor:pointer; }
+.bill-total-row { display:flex; justify-content:space-between; padding:8px 0 4px; font-size:16px; font-weight:bold; color:#f5c842; }
 .checkout-btn { width:100%; padding:11px; background:linear-gradient(135deg,#27ae60,#1e8449); color:#fff; border:none; border-radius:10px; font-size:14px; font-weight:bold; cursor:pointer; margin-top:8px; }
-.add-more-bar { background:#0f3460; padding:8px 16px; font-size:12px; color:#f5a623; font-weight:bold; }
+.add-more-bar { background:rgba(15,52,96,0.8); padding:8px 16px; font-size:12px; color:#f5c842; font-weight:bold; }
 
-/* 面包屑导航 */
-.breadcrumb { display:flex; align-items:center; padding:10px 14px; gap:6px; background:#16213e; border-bottom:1px solid #0f3460; font-size:13px; }
-.bc-item { color:#888; cursor:pointer; }
-.bc-item.active { color:#e94560; font-weight:bold; }
+/* 面包屑 */
+.breadcrumb { display:flex; align-items:center; padding:10px 14px; gap:6px; background:rgba(10,22,40,0.8); border-bottom:1px solid rgba(192,57,43,0.3); font-size:13px; backdrop-filter:blur(5px); }
+.bc-item { color:#a89070; cursor:pointer; }
+.bc-item.active { color:#f5c842; font-weight:bold; }
 .bc-sep { color:#444; }
 
 /* 方块网格 */
 .blocks-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; padding:12px; }
 
-/* 分类大方块 */
-.cat-block { background:linear-gradient(135deg,#16213e,#0f3460); border:2px solid #2a2a4a; border-radius:14px; padding:16px 8px; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; min-height:90px; transition:all 0.2s; text-align:center; }
+/* 分类大方块 - 浮世绘风格 */
+.cat-block {
+  background:rgba(22,33,62,0.85);
+  border:2px solid rgba(192,57,43,0.4);
+  border-radius:14px; padding:16px 8px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  cursor:pointer; min-height:90px; transition:all 0.2s; text-align:center;
+  backdrop-filter:blur(5px);
+  box-shadow:0 4px 15px rgba(0,0,0,0.3);
+}
 .cat-block:active { transform:scale(0.95); }
 .cat-block .cat-emoji { font-size:28px; margin-bottom:6px; }
-.cat-block .cat-name { font-size:13px; font-weight:bold; color:#fff; }
-.cat-block .cat-name-de { font-size:10px; color:#888; margin-top:2px; }
+.cat-block .cat-name { font-size:13px; font-weight:bold; color:#f0e6d3; }
+.cat-block .cat-name-de { font-size:10px; color:#a89070; margin-top:2px; }
 .cat-block.drinks { border-color:#4a90e2; }
 .cat-block.starters { border-color:#27ae60; }
-.cat-block.mains { border-color:#e94560; }
+.cat-block.mains { border-color:#c0392b; }
 .cat-block.desserts { border-color:#9b59b6; }
 .cat-block.lunch { border-color:#f5a623; }
 
 /* 子分类方块 */
-.sub-block { background:#16213e; border:2px solid #2a2a4a; border-radius:12px; padding:14px 8px; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; min-height:80px; transition:all 0.2s; text-align:center; }
+.sub-block {
+  background:rgba(22,33,62,0.85);
+  border:2px solid rgba(168,144,112,0.3);
+  border-radius:12px; padding:14px 8px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  cursor:pointer; min-height:80px; transition:all 0.2s; text-align:center;
+  backdrop-filter:blur(5px);
+}
 .sub-block:active { transform:scale(0.95); }
 .sub-block .sub-emoji { font-size:22px; margin-bottom:6px; }
-.sub-block .sub-name { font-size:12px; font-weight:bold; color:#fff; }
-.sub-block .sub-count { font-size:10px; color:#888; margin-top:3px; }
+.sub-block .sub-name { font-size:12px; font-weight:bold; color:#f0e6d3; }
+.sub-block .sub-count { font-size:10px; color:#a89070; margin-top:3px; }
 
 /* 菜品方块 */
-.menu-block { background:#16213e; border:2px solid #2a2a4a; border-radius:10px; padding:10px 6px 8px; display:flex; flex-direction:column; align-items:center; cursor:pointer; position:relative; min-height:80px; transition:all 0.15s; user-select:none; text-align:center; }
+.menu-block {
+  background:rgba(22,33,62,0.85);
+  border:2px solid rgba(168,144,112,0.2);
+  border-radius:10px; padding:10px 6px 8px;
+  display:flex; flex-direction:column; align-items:center;
+  cursor:pointer; position:relative; min-height:80px;
+  transition:all 0.15s; user-select:none; text-align:center;
+  backdrop-filter:blur(5px);
+}
 .menu-block:active { transform:scale(0.95); }
-.menu-block.selected { border-color:#e94560; background:#2a1020; }
-.qty-badge { position:absolute; top:-8px; right:-8px; background:#e94560; color:#fff; border-radius:50%; width:22px; height:22px; font-size:12px; display:flex; align-items:center; justify-content:center; font-weight:bold; box-shadow:0 2px 6px rgba(0,0,0,0.4); }
-.block-name { font-size:12px; font-weight:bold; line-height:1.3; margin-bottom:4px; flex:1; display:flex; align-items:center; justify-content:center; }
-.block-price { font-size:12px; color:#f5a623; font-weight:bold; }
+.menu-block.selected { border-color:#c0392b; background:rgba(192,57,43,0.2); }
+.qty-badge { position:absolute; top:-8px; right:-8px; background:#c0392b; color:#fff; border-radius:50%; width:22px; height:22px; font-size:12px; display:flex; align-items:center; justify-content:center; font-weight:bold; box-shadow:0 2px 6px rgba(0,0,0,0.5); }
+.block-name { font-size:12px; font-weight:bold; line-height:1.3; margin-bottom:4px; flex:1; display:flex; align-items:center; justify-content:center; color:#f0e6d3; }
+.block-price { font-size:12px; color:#f5c842; font-weight:bold; }
 .block-note-btn { font-size:10px; color:#4a90e2; cursor:pointer; margin-top:4px; padding:2px 6px; border:1px solid #4a90e2; border-radius:10px; }
 
 /* 备注弹窗 */
-.note-popup { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#16213e; border:1px solid #e94560; border-radius:12px; padding:16px; z-index:500; width:80%; max-width:320px; }
-.note-popup h4 { font-size:14px; margin-bottom:10px; color:#f5a623; }
-.note-popup input { width:100%; background:#0d1117; border:1px solid #333; border-radius:8px; color:#fff; padding:8px 12px; font-size:14px; margin-bottom:10px; }
+.note-popup { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#16213e; border:1px solid #c0392b; border-radius:12px; padding:16px; z-index:500; width:80%; max-width:320px; }
+.note-popup h4 { font-size:14px; margin-bottom:10px; color:#f5c842; }
+.note-popup input { width:100%; background:#0a1628; border:1px solid #333; border-radius:8px; color:#f0e6d3; padding:8px 12px; font-size:14px; margin-bottom:10px; }
 .note-popup-btns { display:flex; gap:8px; }
 .note-popup-btns button { flex:1; padding:8px; border:none; border-radius:8px; font-size:13px; cursor:pointer; }
-.note-confirm { background:#e94560; color:#fff; }
+.note-confirm { background:#c0392b; color:#fff; }
 .note-cancel { background:#333; color:#fff; }
-.overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:499; }
+.overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:499; }
 
 /* 底部栏 */
-.bottom-bar { position:fixed; bottom:0; left:0; right:0; background:#16213e; border-top:1px solid #0f3460; padding:10px 16px; z-index:100; }
-.order-summary { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-size:13px; color:#888; }
-.order-total { font-size:17px; font-weight:bold; color:#f5a623; }
-.note-global { width:100%; background:#1a1a2e; border:1px solid #333; border-radius:8px; color:#fff; padding:7px 12px; font-size:13px; margin-bottom:7px; }
-.confirm-btn { width:100%; padding:13px; background:linear-gradient(135deg,#e94560,#c0392b); color:#fff; border:none; border-radius:12px; font-size:16px; font-weight:bold; cursor:pointer; }
-.confirm-btn:disabled { background:#333; color:#666; }
+.bottom-bar { position:fixed; bottom:0; left:0; right:0; background:rgba(10,22,40,0.95); border-top:1px solid rgba(192,57,43,0.4); padding:10px 16px; z-index:100; backdrop-filter:blur(10px); }
+.order-summary { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-size:13px; color:#a89070; }
+.order-total { font-size:17px; font-weight:bold; color:#f5c842; }
+.note-global { width:100%; background:rgba(10,22,40,0.8); border:1px solid rgba(168,144,112,0.3); border-radius:8px; color:#f0e6d3; padding:7px 12px; font-size:13px; margin-bottom:7px; }
+.confirm-btn { width:100%; padding:13px; background:linear-gradient(135deg,#c0392b,#922b21); color:#fff; border:none; border-radius:12px; font-size:16px; font-weight:bold; cursor:pointer; letter-spacing:1px; }
+.confirm-btn:disabled { background:rgba(51,51,51,0.6); color:#666; }
 </style>
 </head>
 <body>
+
+<!-- 浮世绘背景 -->
+<div class="bg-fixed"></div>
+<div class="fuji-bg">
+  <svg viewBox="0 0 800 200" xmlns="http://www.w3.org/2000/svg">
+    <polygon points="100,200 400,20 700,200" fill="#2d4a8a"/>
+    <polygon points="340,55 400,20 460,55 440,65 400,35 360,65" fill="#e8e0d0"/>
+    <polygon points="250,140 400,20 550,140" fill="#1f3870" opacity="0.4"/>
+    <path d="M0,170 Q100,155 200,170 Q300,185 400,170 Q500,155 600,170 Q700,185 800,170 L800,200 L0,200 Z" fill="#1a3366"/>
+  </svg>
+</div>
+<div class="sakura-layer" id="sakura"></div>
+
+<div class="content">
 <div class="header">
-  <span class="back-btn" onclick="location.href='/'">←</span>
+  <span class="back-btn" onclick="location.href='/'">⛩️</span>
   <div class="header-info">
-    <h2 id="table-title">加载中...</h2>
+    <h2 id="table-title">🍜 加载中...</h2>
     <p id="table-subtitle"></p>
   </div>
 </div>
@@ -99,18 +160,15 @@ body { font-family:'PingFang SC',sans-serif; background:#1a1a2e; color:#fff; min
     </div>
     <button class="checkout-btn" onclick="checkout()">✅ 已结账 / Bezahlt</button>
   </div>
-  <div class="add-more-bar">➕ 继续加菜 / Weitere Bestellungen</div>
+  <div class="add-more-bar">🌸 继续加菜 / Weitere Bestellungen</div>
 </div>
 
-<!-- 面包屑 -->
 <div class="breadcrumb" id="breadcrumb">
-  <span class="bc-item active">菜单</span>
+  <span class="bc-item active">🏯 菜单</span>
 </div>
 
-<!-- 内容区 -->
 <div id="main-content"></div>
 
-<!-- 备注弹窗 -->
 <div class="overlay" id="overlay" onclick="closeNote()"></div>
 <div class="note-popup" id="note-popup">
   <h4 id="note-popup-title">📝 备注</h4>
@@ -127,313 +185,268 @@ body { font-family:'PingFang SC',sans-serif; background:#1a1a2e; color:#fff; min
     <span class="order-total" id="order-total">€ 0.00</span>
   </div>
   <input class="note-global" type="text" id="global-note" placeholder="整桌备注 / Tisch-Bemerkung">
-  <button class="confirm-btn" id="confirm-btn" onclick="submitOrder()" disabled>确认下单 / Bestellen</button>
+  <button class="confirm-btn" id="confirm-btn" onclick="submitOrder()" disabled>🍱 确认下单 / Bestellen</button>
+</div>
 </div>
 
 <script>
+// 樱花
+function createPetals() {
+  const c = document.getElementById('sakura');
+  for (let i=0;i<10;i++) {
+    const p = document.createElement('div');
+    p.className='petal';
+    p.textContent=['🌸','🌺','🌼'][Math.floor(Math.random()*3)];
+    p.style.left=Math.random()*100+'%';
+    p.style.fontSize=(8+Math.random()*10)+'px';
+    p.style.animationDuration=(8+Math.random()*10)+'s';
+    p.style.animationDelay=(Math.random()*8)+'s';
+    c.appendChild(p);
+  }
+}
+createPetals();
+
 const tableId = parseInt(window.location.pathname.split('/').pop());
-let tableInfo = {};
-let menuData = {};
-let cart = {};
-let noteTargetId = null;
-let currentView = 'categories'; // categories / subcategories / items
-let currentCat = null;
-let currentSub = null;
+let tableInfo={}, menuData={}, cart={}, noteTargetId=null;
+let currentCat=null, currentSub=null;
 
 const categories = {
-  drinks:   { zh:'酒水',     de:'Getränke',      emoji:'🍺' },
-  starters: { zh:'前菜',     de:'Vorspeisen',    emoji:'🥗' },
-  mains:    { zh:'主食',     de:'Hauptgerichte', emoji:'🍜' },
-  desserts: { zh:'甜品',     de:'Desserts',      emoji:'🍮' },
-  lunch:    { zh:'午市套餐', de:'Mittagsmenü',   emoji:'🍱' },
+  drinks:   {zh:'酒水',     de:'Getränke',      emoji:'🍺'},
+  starters: {zh:'前菜',     de:'Vorspeisen',    emoji:'🥗'},
+  mains:    {zh:'主食',     de:'Hauptgerichte', emoji:'🍜'},
+  desserts: {zh:'甜品',     de:'Desserts',      emoji:'🍮'},
+  lunch:    {zh:'午市套餐', de:'Mittagsmenü',   emoji:'🍱'},
 };
 
 const drinkSubs = {
-  homemade: { zh:'自制饮料', de:'Hausgemacht', emoji:'🧃' },
-  beer:     { zh:'啤酒',     de:'Bier',        emoji:'🍺' },
-  wine:     { zh:'葡萄酒',   de:'Wein',        emoji:'🍷' },
-  sake:     { zh:'清酒',     de:'Sake',        emoji:'🍶' },
-  whisky:   { zh:'威士忌',   de:'Whisky',      emoji:'🥃' },
-  cocktail: { zh:'鸡尾酒',   de:'Cocktails',   emoji:'🍹' },
-  soft:     { zh:'无酒精',   de:'Alkoholfrei', emoji:'🥤' },
-  coffee:   { zh:'咖啡/茶',  de:'Kaffee/Tee',  emoji:'☕' },
+  homemade:{zh:'自制饮料',de:'Hausgemacht',emoji:'🧃'},
+  beer:    {zh:'啤酒',    de:'Bier',       emoji:'🍺'},
+  wine:    {zh:'葡萄酒',  de:'Wein',       emoji:'🍷'},
+  sake:    {zh:'清酒',    de:'Sake',       emoji:'🍶'},
+  whisky:  {zh:'威士忌',  de:'Whisky',     emoji:'🥃'},
+  cocktail:{zh:'鸡尾酒',  de:'Cocktails',  emoji:'🍹'},
+  soft:    {zh:'无酒精',  de:'Alkoholfrei',emoji:'🥤'},
+  coffee:  {zh:'咖啡/茶', de:'Kaffee/Tee', emoji:'☕'},
 };
 
 const mainsSubs = {
-  ramen: { zh:'拉面/主食', de:'Ramen/Reis', emoji:'🍜' },
-  sides: { zh:'配菜',     de:'Beilagen',   emoji:'🥚' },
+  ramen:{zh:'拉面/主食',de:'Ramen/Reis',emoji:'🍜'},
+  sides:{zh:'配菜',    de:'Beilagen',  emoji:'🥚'},
 };
 
 async function init() {
-  const [tableRes, menuRes] = await Promise.all([
-    fetch(`/api/table/${tableId}`),
-    fetch('/api/menu')
-  ]);
-  const tableData = await tableRes.json();
-  tableInfo = tableData.table;
-  const existingOrders = tableData.orders;
-  document.getElementById('table-title').textContent = tableInfo.name;
-  document.getElementById('table-subtitle').textContent = tableInfo.status === 'occupied' ? '桌台占用中' : '空闲桌台';
-  const items = await menuRes.json();
+  const [tRes,mRes] = await Promise.all([fetch(`/api/table/${tableId}`),fetch('/api/menu')]);
+  const td = await tRes.json();
+  tableInfo = td.table;
+  document.getElementById('table-title').textContent = '🍜 '+tableInfo.name;
+  document.getElementById('table-subtitle').textContent = tableInfo.status==='occupied'?'桌台占用中':'空闲桌台';
+  const items = await mRes.json();
   items.forEach(item => {
-    if (!menuData[item.category]) menuData[item.category] = {};
-    const sub = item.subcategory || item.category;
-    if (!menuData[item.category][sub]) menuData[item.category][sub] = [];
+    if (!menuData[item.category]) menuData[item.category]={};
+    const sub = item.subcategory||item.category;
+    if (!menuData[item.category][sub]) menuData[item.category][sub]=[];
     menuData[item.category][sub].push(item);
   });
-  renderBill(existingOrders);
+  renderBill(td.orders);
   showCategories();
 }
 
 function showCategories() {
-  currentView = 'categories';
-  currentCat = null;
-  currentSub = null;
+  currentCat=null; currentSub=null;
   updateBreadcrumb();
-  const content = document.getElementById('main-content');
-  content.innerHTML = '<div class="blocks-grid">' +
-    Object.entries(categories).map(([key, cat]) => {
-      const count = menuData[key] ? Object.values(menuData[key]).flat().length : 0;
-      return `<div class="cat-block ${key}" onclick="showSubcategories('${key}')">
+  document.getElementById('main-content').innerHTML = '<div class="blocks-grid">'+
+    Object.entries(categories).map(([key,cat])=>`
+      <div class="cat-block ${key}" onclick="showSubcategories('${key}')">
         <div class="cat-emoji">${cat.emoji}</div>
         <div class="cat-name">${cat.zh}</div>
         <div class="cat-name-de">${cat.de}</div>
-      </div>`;
-    }).join('') + '</div>';
+      </div>`).join('')+'</div>';
 }
 
 function showSubcategories(cat) {
-  currentView = 'subcategories';
-  currentCat = cat;
-  currentSub = null;
+  currentCat=cat; currentSub=null;
   updateBreadcrumb();
-  const content = document.getElementById('main-content');
-  const catData = menuData[cat] || {};
-
-  // 如果只有一个子分类，直接显示菜品
-  const subs = Object.keys(catData);
-  if (subs.length === 1 || cat === 'starters' || cat === 'desserts' || cat === 'lunch') {
-    showItems(cat, subs[0] || cat);
-    return;
+  const catData=menuData[cat]||{};
+  const subs=Object.keys(catData);
+  if (subs.length<=1||cat==='starters'||cat==='desserts'||cat==='lunch') {
+    showItems(cat, subs[0]||cat); return;
   }
-
-  // 酒水和主食显示子分类
-  let subMap = cat === 'drinks' ? drinkSubs : mainsSubs;
-  
-  content.innerHTML = '<div class="blocks-grid">' +
-    subs.map(sub => {
-      const info = subMap[sub] || { zh: sub, de: sub, emoji: '🍽️' };
-      const count = (catData[sub] || []).length;
+  const subMap = cat==='drinks'?drinkSubs:mainsSubs;
+  document.getElementById('main-content').innerHTML = '<div class="blocks-grid">'+
+    subs.map(sub=>{
+      const info=subMap[sub]||{zh:sub,de:sub,emoji:'🍽️'};
       return `<div class="sub-block" onclick="showItems('${cat}','${sub}')">
         <div class="sub-emoji">${info.emoji}</div>
         <div class="sub-name">${info.zh}</div>
-        <div class="sub-count">${count} 款</div>
+        <div class="sub-count">${(catData[sub]||[]).length} 款</div>
       </div>`;
-    }).join('') + '</div>';
+    }).join('')+'</div>';
 }
 
 function showItems(cat, sub) {
-  currentView = 'items';
-  currentCat = cat;
-  currentSub = sub;
+  currentCat=cat; currentSub=sub;
   updateBreadcrumb();
-  const content = document.getElementById('main-content');
-  const items = (menuData[cat] || {})[sub] || [];
-
-  content.innerHTML = '<div class="blocks-grid">' +
-    items.map(item => {
-      const qty = cart[item.id] ? cart[item.id].qty : 0;
+  const items=(menuData[cat]||{})[sub]||[];
+  document.getElementById('main-content').innerHTML = '<div class="blocks-grid">'+
+    items.map(item=>{
+      const qty=cart[item.id]?cart[item.id].qty:0;
       return `<div class="menu-block ${qty>0?'selected':''}" id="block-${item.id}">
-        ${qty > 0 ? `<div class="qty-badge">${qty}</div>` : ''}
+        ${qty>0?`<div class="qty-badge">${qty}</div>`:''}
         <div class="block-name">${item.name}</div>
         <div class="block-price">€${item.price.toFixed(2)}</div>
         <div class="block-note-btn" onclick="openNote(event,${item.id},'${item.name.replace(/'/g,"\\'")}')">📝 备注</div>
       </div>`;
-    }).join('') + '</div>';
-
-  // 绑定点击事件
-  items.forEach(item => {
-    const block = document.getElementById(`block-${item.id}`);
-    if (block) {
-      block.addEventListener('click', e => {
-        if (e.target.classList.contains('block-note-btn')) return;
-        addOne(item.id, item.name, item.price, item.category, item.name_de||item.name);
-      });
-      let pressTimer;
-      block.addEventListener('touchstart', () => { pressTimer = setTimeout(() => removeOne(item.id), 600); });
-      block.addEventListener('touchend', () => clearTimeout(pressTimer));
-      block.addEventListener('touchmove', () => clearTimeout(pressTimer));
-    }
+    }).join('')+'</div>';
+  items.forEach(item=>{
+    const block=document.getElementById(`block-${item.id}`);
+    if (!block) return;
+    block.addEventListener('click',e=>{
+      if (e.target.classList.contains('block-note-btn')) return;
+      addOne(item.id,item.name,item.price,item.category,item.name_de||item.name);
+    });
+    let pt;
+    block.addEventListener('touchstart',()=>{pt=setTimeout(()=>removeOne(item.id),600);});
+    block.addEventListener('touchend',()=>clearTimeout(pt));
+    block.addEventListener('touchmove',()=>clearTimeout(pt));
   });
 }
 
 function updateBreadcrumb() {
-  const bc = document.getElementById('breadcrumb');
-  let html = `<span class="bc-item" onclick="showCategories()">菜单</span>`;
+  let html=`<span class="bc-item" onclick="showCategories()">🏯 菜单</span>`;
   if (currentCat) {
-    const cat = categories[currentCat];
-    html += `<span class="bc-sep">›</span>`;
+    const cat=categories[currentCat];
+    html+=`<span class="bc-sep">›</span>`;
     if (currentSub) {
-      html += `<span class="bc-item" onclick="showSubcategories('${currentCat}')">${cat.zh}</span>`;
+      html+=`<span class="bc-item" onclick="showSubcategories('${currentCat}')">${cat.zh}</span>`;
+      const subMap=currentCat==='drinks'?drinkSubs:{...mainsSubs,[currentSub]:{zh:currentSub}};
+      html+=`<span class="bc-sep">›</span><span class="bc-item active">${(subMap[currentSub]||{zh:currentSub}).zh}</span>`;
     } else {
-      html += `<span class="bc-item active">${cat.zh}</span>`;
+      html+=`<span class="bc-item active">${cat.zh}</span>`;
     }
   }
-  if (currentSub) {
-    const subMap = currentCat === 'drinks' ? drinkSubs : {...mainsSubs, [currentSub]:{zh:currentSub,de:currentSub,emoji:''}};
-    const sub = subMap[currentSub] || {zh:currentSub};
-    html += `<span class="bc-sep">›</span><span class="bc-item active">${sub.zh}</span>`;
-  }
-  bc.innerHTML = html;
+  document.getElementById('breadcrumb').innerHTML=html;
 }
 
-function addOne(id, name, price, category, name_de) {
-  if (!cart[id]) cart[id] = {id, name, name_de, price, qty:0, category, note:''};
-  cart[id].qty += 1;
-  updateBlock(id);
-  updateSummary();
+function addOne(id,name,price,category,name_de) {
+  if (!cart[id]) cart[id]={id,name,name_de,price,qty:0,category,note:''};
+  cart[id].qty+=1;
+  updateBlock(id); updateSummary();
 }
 
 function removeOne(id) {
   if (!cart[id]) return;
-  cart[id].qty = Math.max(0, cart[id].qty - 1);
-  if (cart[id].qty === 0) delete cart[id];
-  updateBlock(id);
-  updateSummary();
-  showToast('－1', '#333');
+  cart[id].qty=Math.max(0,cart[id].qty-1);
+  if (cart[id].qty===0) delete cart[id];
+  updateBlock(id); updateSummary();
+  showToast('－1','#333');
 }
 
 function updateBlock(id) {
-  const qty = cart[id] ? cart[id].qty : 0;
-  const block = document.getElementById(`block-${id}`);
+  const qty=cart[id]?cart[id].qty:0;
+  const block=document.getElementById(`block-${id}`);
   if (!block) return;
-  block.className = `menu-block ${qty > 0 ? 'selected' : ''}`;
-  let badge = block.querySelector('.qty-badge');
-  if (qty > 0) {
-    if (!badge) { badge = document.createElement('div'); badge.className='qty-badge'; block.insertBefore(badge, block.firstChild); }
-    badge.textContent = qty;
+  block.className=`menu-block ${qty>0?'selected':''}`;
+  let badge=block.querySelector('.qty-badge');
+  if (qty>0) {
+    if (!badge){badge=document.createElement('div');badge.className='qty-badge';block.insertBefore(badge,block.firstChild);}
+    badge.textContent=qty;
   } else if (badge) badge.remove();
-  const noteBtn = block.querySelector('.block-note-btn');
-  if (noteBtn) noteBtn.textContent = '📝 ' + (cart[id]?.note || '备注');
+  const nb=block.querySelector('.block-note-btn');
+  if (nb) nb.textContent='📝 '+(cart[id]?.note||'备注');
 }
 
-function openNote(e, id, name) {
-  e.stopPropagation();
-  noteTargetId = id;
-  document.getElementById('note-popup-title').textContent = `📝 ${name}`;
-  document.getElementById('note-popup-input').value = cart[id]?.note || '';
-  document.getElementById('note-popup').style.display = 'block';
-  document.getElementById('overlay').style.display = 'block';
+function openNote(e,id,name) {
+  e.stopPropagation(); noteTargetId=id;
+  document.getElementById('note-popup-title').textContent=`📝 ${name}`;
+  document.getElementById('note-popup-input').value=cart[id]?.note||'';
+  document.getElementById('note-popup').style.display='block';
+  document.getElementById('overlay').style.display='block';
   document.getElementById('note-popup-input').focus();
 }
-
 function confirmNote() {
-  if (noteTargetId && cart[noteTargetId]) {
-    cart[noteTargetId].note = document.getElementById('note-popup-input').value;
-    updateBlock(noteTargetId);
-  }
-  closeNote();
+  if (noteTargetId&&cart[noteTargetId]) cart[noteTargetId].note=document.getElementById('note-popup-input').value;
+  updateBlock(noteTargetId); closeNote();
 }
-
 function closeNote() {
-  document.getElementById('note-popup').style.display = 'none';
-  document.getElementById('overlay').style.display = 'none';
-  noteTargetId = null;
+  document.getElementById('note-popup').style.display='none';
+  document.getElementById('overlay').style.display='none';
+  noteTargetId=null;
 }
 
 function updateSummary() {
-  const items = Object.values(cart);
-  const total = items.reduce((s,i) => s+i.price*i.qty, 0);
-  const count = items.reduce((s,i) => s+i.qty, 0);
-  document.getElementById('item-count').textContent = `已选 ${count} 项`;
-  document.getElementById('order-total').textContent = `€ ${total.toFixed(2)}`;
-  document.getElementById('confirm-btn').disabled = count === 0;
+  const items=Object.values(cart);
+  const total=items.reduce((s,i)=>s+i.price*i.qty,0);
+  const count=items.reduce((s,i)=>s+i.qty,0);
+  document.getElementById('item-count').textContent=`已选 ${count} 项`;
+  document.getElementById('order-total').textContent=`€ ${total.toFixed(2)}`;
+  document.getElementById('confirm-btn').disabled=count===0;
 }
 
 function renderBill(orders) {
-  const area = document.getElementById('bill-area');
-  if (!orders || orders.length === 0) { area.style.display='none'; return; }
-  let allItems = [];
-  orders.forEach(o => {
-    const items = typeof o.items === 'string' ? JSON.parse(o.items) : o.items;
-    items.forEach(i => allItems.push({...i, orderId: o.id}));
+  const area=document.getElementById('bill-area');
+  if (!orders||orders.length===0){area.style.display='none';return;}
+  let allItems=[];
+  orders.forEach(o=>{
+    const items=typeof o.items==='string'?JSON.parse(o.items):o.items;
+    items.forEach(i=>allItems.push({...i,orderId:o.id}));
   });
-  const grouped = {};
-  allItems.forEach(i => {
-    if (!grouped[i.name]) grouped[i.name] = {...i, qty:0, orderIds:[]};
-    grouped[i.name].qty += i.qty;
+  const grouped={};
+  allItems.forEach(i=>{
+    if (!grouped[i.name]) grouped[i.name]={...i,qty:0,orderIds:[]};
+    grouped[i.name].qty+=i.qty;
     grouped[i.name].orderIds.push(i.orderId);
   });
-  const total = Object.values(grouped).reduce((s,i) => s+i.price*i.qty, 0);
-  const container = document.getElementById('bill-items');
-  container.innerHTML = '';
-  Object.values(grouped).forEach(i => {
-    const row = document.createElement('div');
-    row.className = 'bill-item-wrap';
-    row.innerHTML = `
-      <div class="bill-item-delete">🗑️</div>
+  const total=Object.values(grouped).reduce((s,i)=>s+i.price*i.qty,0);
+  const container=document.getElementById('bill-items');
+  container.innerHTML='';
+  Object.values(grouped).forEach(i=>{
+    const row=document.createElement('div');
+    row.className='bill-item-wrap';
+    row.innerHTML=`<div class="bill-item-delete">🗑️</div>
       <div class="bill-item">
-        <span>${i.name} × ${i.qty}${i.note ? ' 📝'+i.note : ''}</span>
+        <span>${i.name} × ${i.qty}${i.note?' 📝'+i.note:''}</span>
         <span>€ ${(i.price*i.qty).toFixed(2)}</span>
       </div>`;
-    const billItem = row.querySelector('.bill-item');
-    const deleteBtn = row.querySelector('.bill-item-delete');
-    let startX = 0;
-    billItem.addEventListener('touchstart', e => { startX = e.touches[0].clientX; });
-    billItem.addEventListener('touchmove', e => {
-      const dx = e.touches[0].clientX - startX;
-      if (dx < -40) { billItem.style.transform='translateX(-65px)'; deleteBtn.style.display='flex'; }
-      if (dx > 10) { billItem.style.transform=''; deleteBtn.style.display='none'; }
+    const bi=row.querySelector('.bill-item'), db=row.querySelector('.bill-item-delete');
+    let sx=0;
+    bi.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;});
+    bi.addEventListener('touchmove',e=>{
+      const dx=e.touches[0].clientX-sx;
+      if (dx<-40){bi.style.transform='translateX(-65px)';db.style.display='flex';}
+      if (dx>10){bi.style.transform='';db.style.display='none';}
     });
-    deleteBtn.addEventListener('click', async () => {
+    db.addEventListener('click',async()=>{
       if (!confirm(`删除 ${i.name}？`)) return;
-      await fetch(`/api/order/${i.orderIds[0]}/delete_item`, {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({item_name: i.name})
-      });
+      await fetch(`/api/order/${i.orderIds[0]}/delete_item`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({item_name:i.name})});
       await init();
     });
     container.appendChild(row);
   });
-  document.getElementById('bill-total-amount').textContent = `€ ${total.toFixed(2)}`;
-  area.style.display = 'block';
+  document.getElementById('bill-total-amount').textContent=`€ ${total.toFixed(2)}`;
+  area.style.display='block';
 }
 
-function showToast(msg, color) {
-  const t = document.createElement('div');
-  t.style.cssText = `position:fixed;top:70px;left:50%;transform:translateX(-50%);background:${color||'#27ae60'};color:#fff;padding:10px 24px;border-radius:10px;font-size:14px;font-weight:bold;z-index:999;`;
-  t.textContent = msg;
-  document.body.appendChild(t);
-  setTimeout(() => t.remove(), 2000);
+function showToast(msg,color) {
+  const t=document.createElement('div');
+  t.style.cssText=`position:fixed;top:70px;left:50%;transform:translateX(-50%);background:${color||'#27ae60'};color:#fff;padding:10px 24px;border-radius:10px;font-size:14px;font-weight:bold;z-index:999;`;
+  t.textContent=msg; document.body.appendChild(t);
+  setTimeout(()=>t.remove(),2000);
 }
 
 async function submitOrder() {
-  const items = Object.values(cart);
-  if (items.length === 0) return;
-  const res = await fetch('/api/order', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({
-      table_id: tableId,
-      table_name: tableInfo.name,
-      zone: tableInfo.zone,
-      items,
-      notes: document.getElementById('global-note').value
-    })
+  const items=Object.values(cart);
+  if (items.length===0) return;
+  const res=await fetch('/api/order',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({table_id:tableId,table_name:tableInfo.name,zone:tableInfo.zone,items,notes:document.getElementById('global-note').value})
   });
-  if (res.ok) {
-    cart = {};
-    document.getElementById('global-note').value = '';
-    updateSummary();
-    await init();
-    showToast('✅ 下单成功！');
-  }
+  if (res.ok){cart={};document.getElementById('global-note').value='';updateSummary();await init();showToast('🌸 下单成功！');}
 }
 
 async function checkout() {
   if (!confirm('确认结账？/ Bezahlung bestätigen?')) return;
-  await fetch(`/api/table/${tableId}/checkout`, {method:'POST'});
-  location.href = '/';
+  await fetch(`/api/table/${tableId}/checkout`,{method:'POST'});
+  location.href='/';
 }
 
 init();

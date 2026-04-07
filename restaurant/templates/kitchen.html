@@ -174,15 +174,17 @@ function getTimerColor(elapsed) {
 }
 
 const DRINKS = ['啤酒','葡萄酒','鸡尾酒','威士忌','咖啡','矿泉水','可乐','柠檬水','冰茶','清酒','伏特加','朗姆','龙舌兰','浓缩','卡布','拿铁','美式','红茶','绿茶','苏打','椰子','果汁','卡尔','柚子','芦荟','汤力','生啤','起泡','玫瑰','霞多','茨威','威特','beer','wine','cocktail','whisky','coffee','soft','sake','espresso','latte','tee','tea','juice','wasser','soda','calpis','yuzuka','spritzer','martini','negroni','campari','aperol','lillet','tonic'];
-const STARTERS = ['毛豆','黄瓜','妈妈','泡菜','裙带','味噌','东阴','炸豆腐','春卷','小笼','饺子','天妇罗','章鱼烧','炸鸡','照烧鸡','沙拉','edamame','cucumber','kimchi','wakame','miso','tom yum','agedashi','gyoza','tempura','takoyaki','karaage','fried chicken','spring roll','meat bun','salat','gurkensalat'];
+const STARTERS = ['毛豆','黄瓜沙拉','妈妈沙拉','泡菜萝卜','泡菜/裙带','裙带菜','味噌汤','东阴功汤','炸豆腐','春卷','小笼包','饺子','天妇罗虾','章鱼烧','炸鸡块','照烧炸鸡','edamame','gurkensalat','kimchi','wakame','miso suppe','tom yum','agedashi','gyoza','tempura shrimp','takoyaki','karaage','spring roll','meat bun','steamed bun'];
 
 function isDrink(item) {
   if (item.category === 'drinks') return true;
+  if (['starters','mains','desserts','lunch'].includes(item.category)) return false;
   const n = (item.name+' '+(item.name_de||'')).toLowerCase();
   return DRINKS.some(k => n.includes(k));
 }
 function isStarter(item) {
   if (item.category === 'starters') return true;
+  if (['mains','desserts','lunch','drinks'].includes(item.category)) return false;
   const n = (item.name+' '+(item.name_de||'')).toLowerCase();
   return STARTERS.some(k => n.includes(k));
 }

@@ -176,7 +176,10 @@ function openEdit(item) {
   document.getElementById('edit-id').value = item.id;
   document.getElementById('edit-category').value = item.category;
   updateSubcats();
-  document.getElementById('edit-subcategory').value = item.subcategory;
+  // 延迟设置subcategory确保下拉框已更新
+  setTimeout(() => {
+    document.getElementById('edit-subcategory').value = item.subcategory;
+  }, 50);
   document.getElementById('edit-name').value = item.name;
   document.getElementById('edit-name-de').value = item.name_de;
   document.getElementById('edit-price').value = item.price;
@@ -186,10 +189,12 @@ function openEdit(item) {
 function closeModal() { document.getElementById('edit-modal').classList.remove('open'); }
 
 async function saveItem() {
+  const cat = document.getElementById('edit-category').value;
+  const sub = document.getElementById('edit-subcategory').value || cat;
   const data = {
     id: document.getElementById('edit-id').value || null,
-    category: document.getElementById('edit-category').value,
-    subcategory: document.getElementById('edit-subcategory').value,
+    category: cat,
+    subcategory: sub,
     name: document.getElementById('edit-name').value,
     name_de: document.getElementById('edit-name-de').value,
     price: parseFloat(document.getElementById('edit-price').value) || 0,

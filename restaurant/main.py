@@ -388,6 +388,40 @@ def delete_menu_item(item_id):
     conn.close()
     return jsonify({'success':True})
 
+@app.route('/api/order/<int:order_id>/delete_item', methods=['POST'])
+@login_required
+def delete_item(order_id):
+    data = request.json
+    item_name = data.get('item_name')
+    conn = get_db()
+    order = conn.execute('SELECT items FROM orders WHERE id=?', (order_id,)).fetchone()
+    if order:
+        items = json.loads(order['items'])
+        items = [i for i in items if i['name'] != item_name]
+        if len(items) == 0:
+            conn.execute('DELETE FROM orders WHERE id=?', (order_id,))
+        else:
+            conn.execute('UPDATE orders SET items=? WHERE id=?', (json.dumps(items, ensure_ascii=False), order_id))
+        conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
+@app.route('/api/menu/fix_lunch', methods=['POST'])
+@admin_required
+def fix_lunch():
+    conn = get_db()
+    # 修复category为空或错误的午市套餐
+    conn.execute('''UPDATE menu SET category="lunch", subcategory="lunch" 
+                    WHERE subcategory="lunch" OR category="lunch" OR 
+                    name_de LIKE "%Nudelsuppe%" OR name_de LIKE "%Teigtaschen%" OR
+                    name_de LIKE "%Mittagsmen%"''')
+    # 修复id 107,108,109,110,111,112,113
+    conn.execute('''UPDATE menu SET category="lunch", subcategory="lunch" 
+                    WHERE id IN (107,108,109,110,111,112,113)''')
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
 @app.route('/api/menu/reset', methods=['POST'])
 @admin_required
 def reset_menu():

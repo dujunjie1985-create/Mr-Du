@@ -285,9 +285,17 @@ def get_table(table_id):
 @login_required
 def get_menu():
     conn = get_db()
+    # 统一把中文category转成英文
+    cat_map = {'饮品':'drinks','开胃菜':'starters','主菜':'mains','甜点':'desserts','午餐':'lunch'}
     items = conn.execute('SELECT * FROM menu ORDER BY category, subcategory').fetchall()
     conn.close()
-    return jsonify([dict(i) for i in items])
+    result = []
+    for i in items:
+        d = dict(i)
+        d['category'] = cat_map.get(d['category'], d['category'])
+        d['subcategory'] = cat_map.get(d['subcategory'], d['subcategory'])
+        result.append(d)
+    return jsonify(result)
 
 @app.route('/api/order', methods=['POST'])
 @login_required
@@ -368,13 +376,16 @@ def swap_tables():
 @admin_required
 def update_menu():
     data = request.json
+    cat_map = {'饮品':'drinks','开胃菜':'starters','主菜':'mains','甜点':'desserts','午餐':'lunch'}
+    category = cat_map.get(data['category'], data['category'])
+    subcategory = cat_map.get(data['subcategory'], data['subcategory']) or category
     conn = get_db()
     if data.get('id'):
         conn.execute('UPDATE menu SET name=?, name_de=?, price=?, category=?, subcategory=? WHERE id=?',
-                     (data['name'],data['name_de'],data['price'],data['category'],data['subcategory'],data['id']))
+                     (data['name'],data['name_de'],data['price'],category,subcategory,data['id']))
     else:
         conn.execute('INSERT INTO menu (category, subcategory, name, name_de, price) VALUES (?, ?, ?, ?, ?)',
-                     (data['category'],data['subcategory'],data['name'],data['name_de'],data['price']))
+                     (category,subcategory,data['name'],data['name_de'],data['price']))
     conn.commit()
     conn.close()
     return jsonify({'success':True})

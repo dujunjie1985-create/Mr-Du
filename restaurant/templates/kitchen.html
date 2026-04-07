@@ -405,6 +405,11 @@ setInterval(() => {
   }
 }, 1000);
 
+socket.on('urgent_alert', data => {
+  playSound('urgent');
+  showToast(`⚡ 催单！${data.table_name}`, '#f5a623');
+});
+
 socket.on('new_order', data => {
   playSound('new');
   showToast(`🆕 新订单：${data.table_name}`, '#e94560');

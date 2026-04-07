@@ -495,6 +495,10 @@ def orders_history():
         result.append(od)
     return jsonify(result)
 
+@socketio.on('urgent_request')
+def handle_urgent(data):
+    socketio.emit('urgent_alert', data)
+
 if __name__ == '__main__':
     init_db()
     socketio.run(app, host='0.0.0.0', port=5000, debug=True)

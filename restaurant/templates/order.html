@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>点餐</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body { font-family:'PingFang SC','Hiragino Sans',sans-serif; background:#0a1628; color:#f0e6d3; min-height:100vh; padding-bottom:160px; }
@@ -46,6 +47,9 @@ body { font-family:'PingFang SC','Hiragino Sans',sans-serif; background:#0a1628;
 .bill-item-delete { position:absolute; right:0; top:0; bottom:0; width:60px; background:#c0392b; color:#fff; display:none; align-items:center; justify-content:center; font-size:20px; cursor:pointer; }
 .bill-total-row { display:flex; justify-content:space-between; padding:8px 0 4px; font-size:16px; font-weight:bold; color:#f5c842; }
 .checkout-btn { width:100%; padding:11px; background:linear-gradient(135deg,#27ae60,#1e8449); color:#fff; border:none; border-radius:10px; font-size:14px; font-weight:bold; cursor:pointer; margin-top:8px; }
+.urgent-btn { width:100%; padding:10px; background:linear-gradient(135deg,#f5a623,#e67e22); color:#fff; border:none; border-radius:10px; font-size:14px; font-weight:bold; cursor:pointer; margin-top:6px; }
+.notify-banner { display:none; position:fixed; top:0; left:0; right:0; background:linear-gradient(135deg,#27ae60,#1e8449); color:#fff; padding:14px; text-align:center; font-size:16px; font-weight:bold; z-index:200; animation:flashIn 0.3s ease; }
+@keyframes flashIn { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
 .add-more-bar { background:rgba(15,52,96,0.8); padding:8px 16px; font-size:12px; color:#f5c842; font-weight:bold; }
 
 /* 面包屑 */
@@ -141,6 +145,8 @@ body { font-family:'PingFang SC','Hiragino Sans',sans-serif; background:#0a1628;
 </div>
 <div class="sakura-layer" id="sakura"></div>
 
+<div class="notify-banner" id="notify-banner"></div>
+
 <div class="content">
 <div class="header">
   <span class="back-btn" onclick="location.href='/'">⛩️</span>
@@ -159,6 +165,7 @@ body { font-family:'PingFang SC','Hiragino Sans',sans-serif; background:#0a1628;
       <span id="bill-total-amount">€ 0.00</span>
     </div>
     <button class="checkout-btn" onclick="checkout()">✅ 已结账 / Bezahlt</button>
+    <button class="urgent-btn" onclick="sendUrgent()">⚡ 催单 / Eilig!</button>
   </div>
   <div class="add-more-bar">🌸 继续加菜 / Weitere Bestellungen</div>
 </div>
@@ -190,6 +197,58 @@ body { font-family:'PingFang SC','Hiragino Sans',sans-serif; background:#0a1628;
 </div>
 
 <script>
+// Socket.IO 监听出菜提醒
+const socket = io();
+let audioEnabled = false;
+let audioCtx = null;
+
+// 自动尝试开启声音
+document.addEventListener('touchstart', () => {
+  if (!audioEnabled) {
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      audioEnabled = true;
+    } catch(e) {}
+  }
+}, {once: true});
+
+function playDoneSound() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); audioEnabled = true; } catch(e) { return; }
+  }
+  try {
+    [0, 0.3].forEach(t => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.frequency.value = 1568;
+      gain.gain.setValueAtTime(0.6, audioCtx.currentTime + t);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + t + 0.25);
+      osc.start(audioCtx.currentTime + t);
+      osc.stop(audioCtx.currentTime + t + 0.25);
+    });
+  } catch(e) {}
+}
+
+function showNotifyBanner(msg) {
+  const b = document.getElementById('notify-banner');
+  b.textContent = msg;
+  b.style.display = 'block';
+  setTimeout(() => b.style.display = 'none', 5000);
+}
+
+socket.on('order_updated', data => {
+  if (data.type === 'kitchen') {
+    playDoneSound();
+    showNotifyBanner(`🔔 菜已出锅，请上菜！/ Bitte servieren!`);
+  }
+});
+
+function sendUrgent() {
+  socket.emit('urgent_request', {table_name: tableInfo.name});
+  showToast('⚡ 催单已发送！', '#f5a623');
+}
+
 // 樱花
 function createPetals() {
   const c = document.getElementById('sakura');

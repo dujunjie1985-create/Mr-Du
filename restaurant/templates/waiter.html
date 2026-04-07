@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Mr. Du Ramen - 服务员</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: 'PingFang SC', 'Hiragino Sans', sans-serif;
+  min-height: 100vh;
+  background: #0a1628;
+  color: #f0e6d3;
+  overflow-x: hidden;
+}
+
+/* 浮世绘背景 */
+.bg-scene {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 0;
+  background: linear-gradient(180deg, 
+    #0a1628 0%, 
+    #1a2744 30%, 
+    #2d4a8a 60%, 
+    #1a3366 80%,
+    #0d1f44 100%
+  );
+}
+
+/* 富士山 */
+.fuji {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  z-index: 1;
+}
+
+.fuji-svg {
+  width: 100%;
+  height: auto;
+}
+
+/* 波浪 */
+.waves {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  z-index: 2;
+}
+
+/* 樱花 */
+.sakura-container {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 3;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.petal {
+  position: absolute;
+  top: -20px;
+  font-size: 16px;
+  animation: fall linear infinite;
+  opacity: 0.8;
+}
+
+@keyframes fall {
+  0% { transform: translateY(-20px) rotate(0deg) translateX(0); opacity: 0.8; }
+  100% { transform: translateY(100vh) rotate(360deg) translateX(40px); opacity: 0; }
+}
+
+/* 主内容 */
+.content {
+  position: relative;
+  z-index: 10;
+  min-height: 100vh;
+  padding-bottom: 20px;
+}
+
+/* 头部 */
+.header {
+  background: rgba(10, 22, 40, 0.85);
+  border-bottom: 2px solid #c0392b;
+  padding: 14px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  backdrop-filter: blur(10px);
+}
+
+.header-left h1 {
+  font-size: 18px;
+  color: #f5c842;
+  letter-spacing: 2px;
+}
+
+.header-left p {
+  font-size: 11px;
+  color: #a89070;
+  margin-top: 2px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.clock {
+  font-size: 13px;
+  color: #a89070;
+  font-family: monospace;
+}
+
+.sound-btn {
+  padding: 6px 12px;
+  background: #c0392b;
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sound-btn.active {
+  background: #27ae60;
+}
+
+.back-btn {
+  font-size: 20px;
+  cursor: pointer;
+  color: #a89070;
+}
+
+/* 通知横幅 */
+.notify-banner {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  background: linear-gradient(135deg, #c0392b, #e74c3c);
+  color: #fff;
+  padding: 16px;
+  text-align: center;
+  font-size: 18px;
+  font-weight: bold;
+  z-index: 100;
+  animation: flashBanner 0.5s ease;
+}
+
+@keyframes flashBanner {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* 装饰分隔线 */
+.section-header {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px 8px;
+  gap: 10px;
+}
+
+.section-header h2 {
+  font-size: 14px;
+  color: #f5c842;
+  letter-spacing: 2px;
+  white-space: nowrap;
+}
+
+.section-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, #c0392b, transparent);
+}
+
+/* 订单卡片 */
+.orders-grid {
+  padding: 0 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.order-card {
+  background: rgba(10, 22, 40, 0.85);
+  border: 1px solid rgba(192, 57, 43, 0.4);
+  border-radius: 12px;
+  padding: 12px 14px;
+  backdrop-filter: blur(5px);
+  animation: slideIn 0.4s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.order-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 4px; height: 100%;
+  background: linear-gradient(180deg, #c0392b, #f5c842);
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.order-card.new-order {
+  border-color: #f5c842;
+  animation: newOrderPulse 1s ease 3;
+}
+
+@keyframes newOrderPulse {
+  0%, 100% { box-shadow: 0 0 0 rgba(245, 200, 66, 0); }
+  50% { box-shadow: 0 0 20px rgba(245, 200, 66, 0.5); }
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding-left: 8px;
+}
+
+.table-name {
+  font-size: 16px;
+  font-weight: bold;
+  color: #f5c842;
+}
+
+.order-time {
+  font-size: 11px;
+  color: #a89070;
+}
+
+.items-list {
+  padding-left: 8px;
+}
+
+.item-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  font-size: 13px;
+  color: #d4c4a8;
+}
+
+.item-row:last-child { border-bottom: none; }
+
+.item-qty {
+  background: #c0392b;
+  color: #fff;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: bold;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.item-note {
+  font-size: 11px;
+  color: #f5c842;
+  margin-left: 28px;
+}
+
+.card-status {
+  margin-top: 8px;
+  padding-left: 8px;
+  font-size: 12px;
+  color: #27ae60;
+}
+
+/* 出菜通知 */
+.done-notify {
+  background: rgba(39, 174, 96, 0.15);
+  border-color: rgba(39, 174, 96, 0.5);
+}
+
+.done-notify::before {
+  background: linear-gradient(180deg, #27ae60, #2ecc71);
+}
+
+/* 空状态 */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #a89070;
+}
+
+.empty-state .fuji-emoji {
+  font-size: 60px;
+  margin-bottom: 16px;
+}
+
+.empty-state p {
+  font-size: 14px;
+  letter-spacing: 2px;
+}
+
+/* 底部装饰 */
+.bottom-deco {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: linear-gradient(transparent, rgba(10,22,40,0.8));
+  z-index: 5;
+  pointer-events: none;
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(10,22,40,0.95);
+  border: 1px solid #f5c842;
+  color: #f5c842;
+  padding: 10px 24px;
+  border-radius: 30px;
+  font-size: 14px;
+  font-weight: bold;
+  display: none;
+  z-index: 999;
+  white-space: nowrap;
+  backdrop-filter: blur(10px);
+}
+</style>
+</head>
+<body>
+
+<!-- 背景场景 -->
+<div class="bg-scene"></div>
+
+<!-- 富士山 SVG -->
+<div class="fuji">
+  <svg class="fuji-svg" viewBox="0 0 800 300" xmlns="http://www.w3.org/2000/svg">
+    <!-- 远山 -->
+    <polygon points="0,300 200,120 400,300" fill="#1a3366" opacity="0.5"/>
+    <polygon points="400,300 600,100 800,300" fill="#1a3366" opacity="0.4"/>
+    <!-- 富士山主体 -->
+    <polygon points="100,300 400,30 700,300" fill="#2d4a8a"/>
+    <!-- 雪顶 -->
+    <polygon points="340,80 400,30 460,80 440,90 420,75 400,50 380,75 360,90" fill="#e8e0d0"/>
+    <!-- 山腰阴影 -->
+    <polygon points="250,200 400,30 550,200" fill="#1f3870" opacity="0.4"/>
+    <!-- 云层 -->
+    <ellipse cx="150" cy="180" rx="80" ry="20" fill="#1a2744" opacity="0.6"/>
+    <ellipse cx="650" cy="160" rx="70" ry="18" fill="#1a2744" opacity="0.6"/>
+    <!-- 波浪底部 -->
+    <path d="M0,260 Q100,240 200,260 Q300,280 400,260 Q500,240 600,260 Q700,280 800,260 L800,300 L0,300 Z" fill="#0d1f44"/>
+    <path d="M0,280 Q100,265 200,280 Q300,295 400,280 Q500,265 600,280 Q700,295 800,280 L800,300 L0,300 Z" fill="#0a1628" opacity="0.8"/>
+  </svg>
+</div>
+
+<!-- 樱花 -->
+<div class="sakura-container" id="sakura"></div>
+
+<!-- 通知横幅 -->
+<div class="notify-banner" id="notify-banner"></div>
+
+<div class="toast" id="toast"></div>
+
+<!-- 主内容 -->
+<div class="content">
+  <div class="header">
+    <div class="header-left">
+      <h1>🍜 Mr. Du Ramen</h1>
+      <p>服務員看板 / Kellner</p>
+    </div>
+    <div class="header-right">
+      <span class="clock" id="clock"></span>
+      <button class="sound-btn" id="sound-btn" onclick="enableSound()">🔇 声音</button>
+      <span class="back-btn" onclick="location.href='/'">⛩️</span>
+    </div>
+  </div>
+
+  <div class="section-header">
+    <h2>🌸 待上菜订单</h2>
+    <div class="section-line"></div>
+  </div>
+
+  <div class="orders-grid" id="orders-list">
+    <div class="empty-state">
+      <div class="fuji-emoji">🗻</div>
+      <p>暂无待上菜订单</p>
+      <p style="margin-top:8px;font-size:12px;">Keine offenen Bestellungen</p>
+    </div>
+  </div>
+
+  <!-- 出菜提醒区域 -->
+  <div class="section-header" id="done-section" style="display:none;">
+    <h2>✅ 已出菜通知</h2>
+    <div class="section-line"></div>
+  </div>
+  <div class="orders-grid" id="done-list"></div>
+</div>
+
+<div class="bottom-deco"></div>
+
+<script>
+const socket = io();
+let audioEnabled = false;
+let audioCtx = null;
+let currentOrders = [];
+let doneNotifications = [];
+
+// 樱花
+function createPetals() {
+  const container = document.getElementById('sakura');
+  const petals = ['🌸','🌺','🌼'];
+  for (let i = 0; i < 12; i++) {
+    const p = document.createElement('div');
+    p.className = 'petal';
+    p.textContent = petals[Math.floor(Math.random() * petals.length)];
+    p.style.left = Math.random() * 100 + '%';
+    p.style.fontSize = (10 + Math.random() * 12) + 'px';
+    p.style.animationDuration = (6 + Math.random() * 8) + 's';
+    p.style.animationDelay = (Math.random() * 8) + 's';
+    container.appendChild(p);
+  }
+}
+createPetals();
+
+function updateClock() {
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString('de-DE');
+}
+setInterval(updateClock, 1000); updateClock();
+
+function enableSound() {
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+    audioEnabled = true;
+    const btn = document.getElementById('sound-btn');
+    btn.textContent = '🔊 声音开';
+    btn.className = 'sound-btn active';
+  } catch(e) {}
+}
+
+function playAlert(type) {
+  if (!audioEnabled || !audioCtx) return;
+  try {
+    if (type === 'new') {
+      // 新订单：三连音
+      [0, 0.3, 0.6].forEach(t => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.frequency.setValueAtTime(1046, audioCtx.currentTime + t);
+        osc.frequency.setValueAtTime(1318, audioCtx.currentTime + t + 0.1);
+        gain.gain.setValueAtTime(0.8, audioCtx.currentTime + t);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + t + 0.25);
+        osc.start(audioCtx.currentTime + t);
+        osc.stop(audioCtx.currentTime + t + 0.25);
+      });
+    } else if (type === 'done') {
+      // 出菜提醒：两声高音
+      [0, 0.4].forEach(t => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.frequency.value = 1568;
+        gain.gain.setValueAtTime(0.8, audioCtx.currentTime + t);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + t + 0.3);
+        osc.start(audioCtx.currentTime + t);
+        osc.stop(audioCtx.currentTime + t + 0.3);
+      });
+    }
+  } catch(e) {}
+}
+
+function showToast(msg, color) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.borderColor = color || '#f5c842';
+  t.style.color = color || '#f5c842';
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 3000);
+}
+
+function showBanner(msg) {
+  const b = document.getElementById('notify-banner');
+  b.textContent = msg;
+  b.style.display = 'block';
+  setTimeout(() => b.style.display = 'none', 4000);
+}
+
+function renderOrders(orders) {
+  const list = document.getElementById('orders-list');
+  const foodOrders = orders.filter(o => {
+    const items = o.items;
+    return items.some(i => i.category !== 'drinks');
+  });
+
+  if (foodOrders.length === 0) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <div class="fuji-emoji">🗻</div>
+        <p>暂无待上菜订单</p>
+        <p style="margin-top:8px;font-size:12px;">Keine offenen Bestellungen</p>
+      </div>`;
+    return;
+  }
+
+  list.innerHTML = foodOrders.map(o => {
+    const items = o.items.filter(i => i.category !== 'drinks');
+    return `
+      <div class="order-card">
+        <div class="card-header">
+          <span class="table-name">🪑 ${o.table_name}</span>
+          <span class="order-time">${o.created_at.split(' ')[1]}</span>
+        </div>
+        <div class="items-list">
+          ${items.map(i => `
+            <div class="item-row">
+              <span><span class="item-qty">${i.qty}</span>${i.name}</span>
+            </div>
+            ${i.note ? `<div class="item-note">📝 ${i.note}</div>` : ''}
+          `).join('')}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderDoneNotifications() {
+  const section = document.getElementById('done-section');
+  const list = document.getElementById('done-list');
+  const recent = doneNotifications.filter(n => Date.now() - n.timestamp < 10 * 60 * 1000);
+  
+  if (recent.length === 0) {
+    section.style.display = 'none';
+    list.innerHTML = '';
+    return;
+  }
+  
+  section.style.display = 'flex';
+  list.innerHTML = recent.map(n => `
+    <div class="order-card done-notify">
+      <div class="card-header">
+        <span class="table-name" style="color:#2ecc71;">✅ ${n.table}</span>
+        <span class="order-time">${n.time}</span>
+      </div>
+      <div class="card-status">菜已准备好，请上菜！/ Bitte servieren!</div>
+    </div>
+  `).join('');
+}
+
+// WebSocket 监听
+socket.on('new_order', data => {
+  playAlert('new');
+  showToast(`🆕 新订单：${data.table_name}`, '#f5c842');
+  loadOrders();
+});
+
+socket.on('order_updated', data => {
+  if (data.type === 'kitchen') {
+    playAlert('done');
+    // 找到对应的桌名
+    const order = currentOrders.find(o => o.id == data.order_id);
+    const tableName = order ? order.table_name : '某桌';
+    showBanner(`🔔 ${tableName} 菜已出锅，请上菜！`);
+    showToast(`✅ ${tableName} 请上菜！`, '#2ecc71');
+    doneNotifications.unshift({
+      table: tableName,
+      time: new Date().toLocaleTimeString('de-DE'),
+      timestamp: Date.now()
+    });
+    renderDoneNotifications();
+  }
+  loadOrders();
+});
+
+async function loadOrders() {
+  const res = await fetch('/api/kitchen/orders');
+  currentOrders = await res.json();
+  renderOrders(currentOrders);
+}
+
+loadOrders();
+setInterval(loadOrders, 30000);
+setInterval(renderDoneNotifications, 60000);
+</script>
+</body>
+</html>

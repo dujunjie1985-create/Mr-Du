@@ -255,6 +255,11 @@ def bar():
 def admin():
     return render_template('admin.html')
 
+@app.route('/waiter')
+@login_required
+def waiter():
+    return render_template('waiter.html')
+
 @app.route('/qr')
 def qr_page():
     return render_template('qr.html')

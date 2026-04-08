@@ -1,16 +1,17 @@
-from flask import Flask, render_template, request, jsonify, session, redirect
+from flask import Flask, render_template, request, jsonify, session, redirect, make_response
 from flask_socketio import SocketIO, emit
 from functools import wraps
 import json
 import os
 from datetime import datetime
-import sqlite3
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'restaurant2026_mrdu_secret'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-DB_PATH = 'restaurant.db'
+DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://postgres:hYIXrhQIuwZMOwFEqLTTIGGZFUxaDYMS@postgres.railway.internal:5432/railway')
 STAFF_PASSWORD = 'ramen2026'
 ADMIN_PASSWORD = 'djj19851204'
 connected_devices = {}
@@ -33,17 +34,21 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated
 
+def get_db():
+    conn = psycopg2.connect(DATABASE_URL)
+    return conn
+
 def init_db():
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db()
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS tables (
-        id INTEGER PRIMARY KEY,
+        id SERIAL PRIMARY KEY,
         name TEXT,
         zone TEXT,
         status TEXT DEFAULT 'free'
     )''')
     c.execute('''CREATE TABLE IF NOT EXISTS orders (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         table_id INTEGER,
         table_name TEXT,
         zone TEXT,
@@ -55,7 +60,7 @@ def init_db():
         notes TEXT
     )''')
     c.execute('''CREATE TABLE IF NOT EXISTS menu (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         category TEXT,
         subcategory TEXT,
         name TEXT,
@@ -75,7 +80,7 @@ def init_db():
             tables.append((f'花园{i}号', 'garden'))
         tables.append(('打包', 'takeaway'))
         for t in tables:
-            c.execute('INSERT INTO tables (name, zone, status) VALUES (?, ?, "free")', t)
+            c.execute('INSERT INTO tables (name, zone, status) VALUES (%s, %s, %s)', (t[0], t[1], 'free'))
     c.execute('SELECT COUNT(*) FROM menu')
     if c.fetchone()[0] == 0:
         default_menu = [
@@ -193,21 +198,9 @@ def init_db():
             ('lunch','lunch','冬阴功汤+素饺子套餐','Tom Yum Suppe + Vegetarische Teigtaschen',11.90),
             ('lunch','lunch','冬阴功汤+猪肉饺子套餐','Tom Yum Suppe + Schweinefleisch-Teigtaschen',11.90),
         ]
-        c.executemany('INSERT INTO menu (category, subcategory, name, name_de, price) VALUES (?, ?, ?, ?, ?)', default_menu)
-    # 统一把中文category转成英文
-    cat_map = [
-        ('饮品', 'drinks'), ('开胃菜', 'starters'), ('主菜', 'mains'),
-        ('甜点', 'desserts'), ('午餐', 'lunch')
-    ]
-    for zh, en in cat_map:
-        c.execute('UPDATE menu SET category=? WHERE category=?', (en, zh))
-        c.execute('UPDATE menu SET subcategory=? WHERE subcategory=?', (en, zh))
-    
+        c.executemany('INSERT INTO menu (category, subcategory, name, name_de, price) VALUES (%s, %s, %s, %s, %s)', default_menu)
     conn.commit()
     conn.close()
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
 
 @app.route('/login', methods=['GET','POST'])
 def login():
@@ -262,14 +255,14 @@ def bar():
 def admin():
     return render_template('admin.html')
 
+@app.route('/qr')
+def qr_page():
+    return render_template('qr.html')
+
 @app.route('/waiter')
 @login_required
 def waiter():
     return render_template('waiter.html')
-
-@app.route('/qr')
-def qr_page():
-    return render_template('qr.html')
 
 @app.route('/api/devices')
 @admin_required
@@ -280,7 +273,9 @@ def get_devices():
 @login_required
 def get_tables():
     conn = get_db()
-    tables = conn.execute('SELECT * FROM tables').fetchall()
+    c = conn.cursor(cursor_factory=RealDictCursor)
+    c.execute('SELECT * FROM tables ORDER BY id')
+    tables = c.fetchall()
     conn.close()
     return jsonify([dict(t) for t in tables])
 
@@ -288,27 +283,28 @@ def get_tables():
 @login_required
 def get_table(table_id):
     conn = get_db()
-    table = conn.execute('SELECT * FROM tables WHERE id=?', (table_id,)).fetchone()
-    orders = conn.execute('SELECT * FROM orders WHERE table_id=? AND status != "paid" ORDER BY created_at DESC', (table_id,)).fetchall()
+    c = conn.cursor(cursor_factory=RealDictCursor)
+    c.execute('SELECT * FROM tables WHERE id=%s', (table_id,))
+    table = c.fetchone()
+    c.execute("SELECT * FROM orders WHERE table_id=%s AND status != 'paid' ORDER BY created_at DESC", (table_id,))
+    orders = c.fetchall()
     conn.close()
-    return jsonify({'table': dict(table), 'orders': [dict(o) for o in orders]})
+    result_orders = []
+    for o in orders:
+        od = dict(o)
+        od['items'] = json.loads(od['items'])
+        result_orders.append(od)
+    return jsonify({'table': dict(table), 'orders': result_orders})
 
 @app.route('/api/menu')
 @login_required
 def get_menu():
     conn = get_db()
-    # 统一把中文category转成英文
-    cat_map = {'饮品':'drinks','开胃菜':'starters','主菜':'mains','甜点':'desserts','午餐':'lunch'}
-    items = conn.execute('SELECT * FROM menu ORDER BY category, subcategory').fetchall()
+    c = conn.cursor(cursor_factory=RealDictCursor)
+    c.execute('SELECT * FROM menu ORDER BY category, subcategory')
+    items = c.fetchall()
     conn.close()
-    result = []
-    for i in items:
-        d = dict(i)
-        d['category'] = cat_map.get(d['category'], d['category'])
-        d['subcategory'] = cat_map.get(d['subcategory'], d['subcategory'])
-        result.append(d)
-    from flask import make_response
-    resp = make_response(jsonify(result))
+    resp = make_response(jsonify([dict(i) for i in items]))
     resp.headers['Cache-Control'] = 'public, max-age=300'
     return resp
 
@@ -317,14 +313,15 @@ def get_menu():
 def place_order():
     data = request.json
     conn = get_db()
+    c = conn.cursor(cursor_factory=RealDictCursor)
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     items_json = json.dumps(data['items'], ensure_ascii=False)
-    conn.execute('''INSERT INTO orders (table_id, table_name, zone, items, status, created_at, notes)
-                    VALUES (?, ?, ?, ?, "pending", ?, ?)''',
-                 (data['table_id'], data['table_name'], data['zone'], items_json, now, data.get('notes','')))
-    conn.execute('UPDATE tables SET status="occupied" WHERE id=?', (data['table_id'],))
+    c.execute('''INSERT INTO orders (table_id, table_name, zone, items, status, created_at, notes)
+                 VALUES (%s, %s, %s, %s, 'pending', %s, %s) RETURNING id''',
+              (data['table_id'], data['table_name'], data['zone'], items_json, now, data.get('notes','')))
+    order_id = c.fetchone()['id']
+    c.execute("UPDATE tables SET status='occupied' WHERE id=%s", (data['table_id'],))
     conn.commit()
-    order_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
     conn.close()
     order_data = {'id':order_id,'table_id':data['table_id'],'table_name':data['table_name'],'zone':data['zone'],'items':data['items'],'created_at':now,'notes':data.get('notes','')}
     socketio.emit('new_order', order_data)
@@ -336,37 +333,54 @@ def complete_order(order_id):
     item_type = data.get('type','all')
     section = data.get('section', 'all')
     conn = get_db()
-    try:
-        conn.execute('ALTER TABLE orders ADD COLUMN starter_done INTEGER DEFAULT 0')
-    except: pass
-    try:
-        conn.execute('ALTER TABLE orders ADD COLUMN main_done INTEGER DEFAULT 0')
-    except: pass
+    c = conn.cursor(cursor_factory=RealDictCursor)
     if item_type == 'kitchen':
         if section == 's':
-            conn.execute('UPDATE orders SET starter_done=1 WHERE id=?', (order_id,))
+            c.execute('UPDATE orders SET starter_done=1 WHERE id=%s', (order_id,))
         elif section == 'm':
-            conn.execute('UPDATE orders SET main_done=1 WHERE id=?', (order_id,))
+            c.execute('UPDATE orders SET main_done=1 WHERE id=%s', (order_id,))
         else:
-            conn.execute('UPDATE orders SET starter_done=1, main_done=1, status="kitchen_done" WHERE id=?', (order_id,))
-        order = conn.execute('SELECT starter_done, main_done FROM orders WHERE id=?', (order_id,)).fetchone()
+            c.execute("UPDATE orders SET starter_done=1, main_done=1, status='kitchen_done' WHERE id=%s", (order_id,))
+        c.execute('SELECT starter_done, main_done FROM orders WHERE id=%s', (order_id,))
+        order = c.fetchone()
         if order and order['starter_done'] and order['main_done']:
-            conn.execute('UPDATE orders SET status="kitchen_done" WHERE id=?', (order_id,))
+            c.execute("UPDATE orders SET status='kitchen_done' WHERE id=%s", (order_id,))
     elif item_type == 'bar':
-        conn.execute('UPDATE orders SET status="bar_done" WHERE id=?', (order_id,))
+        c.execute("UPDATE orders SET status='bar_done' WHERE id=%s", (order_id,))
     else:
-        conn.execute('UPDATE orders SET status="done" WHERE id=?', (order_id,))
+        c.execute("UPDATE orders SET status='done' WHERE id=%s", (order_id,))
     conn.commit()
     conn.close()
     socketio.emit('order_updated', {'order_id':order_id,'type':item_type,'section':section})
     return jsonify({'success':True})
 
+@app.route('/api/order/<int:order_id>/delete_item', methods=['POST'])
+@login_required
+def delete_item(order_id):
+    data = request.json
+    item_name = data.get('item_name')
+    conn = get_db()
+    c = conn.cursor(cursor_factory=RealDictCursor)
+    c.execute('SELECT items FROM orders WHERE id=%s', (order_id,))
+    order = c.fetchone()
+    if order:
+        items = json.loads(order['items'])
+        items = [i for i in items if i['name'] != item_name]
+        if len(items) == 0:
+            c.execute('DELETE FROM orders WHERE id=%s', (order_id,))
+        else:
+            c.execute('UPDATE orders SET items=%s WHERE id=%s', (json.dumps(items, ensure_ascii=False), order_id))
+        conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
 @app.route('/api/table/<int:table_id>/checkout', methods=['POST'])
 @login_required
 def checkout(table_id):
     conn = get_db()
-    conn.execute('UPDATE orders SET status="paid" WHERE table_id=?', (table_id,))
-    conn.execute('UPDATE tables SET status="free" WHERE id=?', (table_id,))
+    c = conn.cursor()
+    c.execute("UPDATE orders SET status='paid' WHERE table_id=%s", (table_id,))
+    c.execute("UPDATE tables SET status='free' WHERE id=%s", (table_id,))
     conn.commit()
     conn.close()
     socketio.emit('table_updated', {'table_id':table_id,'status':'free'})
@@ -379,9 +393,10 @@ def swap_tables():
     from_id = data['from_id']
     to_id = data['to_id']
     conn = get_db()
-    conn.execute('UPDATE orders SET table_id=? WHERE table_id=? AND status != "paid"', (to_id, from_id))
-    conn.execute('UPDATE tables SET status="occupied" WHERE id=?', (to_id,))
-    conn.execute('UPDATE tables SET status="free" WHERE id=?', (from_id,))
+    c = conn.cursor()
+    c.execute("UPDATE orders SET table_id=%s WHERE table_id=%s AND status != 'paid'", (to_id, from_id))
+    c.execute("UPDATE tables SET status='occupied' WHERE id=%s", (to_id,))
+    c.execute("UPDATE tables SET status='free' WHERE id=%s", (from_id,))
     conn.commit()
     conn.close()
     socketio.emit('tables_swapped', {'from_id':from_id,'to_id':to_id})
@@ -391,16 +406,16 @@ def swap_tables():
 @admin_required
 def update_menu():
     data = request.json
-    cat_map = {'饮品':'drinks','开胃菜':'starters','主菜':'mains','甜点':'desserts','午餐':'lunch'}
-    category = cat_map.get(data['category'], data['category'])
-    subcategory = cat_map.get(data['subcategory'], data['subcategory']) or category
+    category = data['category']
+    subcategory = data.get('subcategory') or category
     conn = get_db()
+    c = conn.cursor()
     if data.get('id'):
-        conn.execute('UPDATE menu SET name=?, name_de=?, price=?, category=?, subcategory=? WHERE id=?',
-                     (data['name'],data['name_de'],data['price'],category,subcategory,data['id']))
+        c.execute('UPDATE menu SET name=%s, name_de=%s, price=%s, category=%s, subcategory=%s WHERE id=%s',
+                  (data['name'],data['name_de'],data['price'],category,subcategory,data['id']))
     else:
-        conn.execute('INSERT INTO menu (category, subcategory, name, name_de, price) VALUES (?, ?, ?, ?, ?)',
-                     (category,subcategory,data['name'],data['name_de'],data['price']))
+        c.execute('INSERT INTO menu (category, subcategory, name, name_de, price) VALUES (%s, %s, %s, %s, %s)',
+                  (category,subcategory,data['name'],data['name_de'],data['price']))
     conn.commit()
     conn.close()
     return jsonify({'success':True})
@@ -409,50 +424,18 @@ def update_menu():
 @admin_required
 def delete_menu_item(item_id):
     conn = get_db()
-    conn.execute('DELETE FROM menu WHERE id=?', (item_id,))
+    c = conn.cursor()
+    c.execute('DELETE FROM menu WHERE id=%s', (item_id,))
     conn.commit()
     conn.close()
     return jsonify({'success':True})
-
-@app.route('/api/order/<int:order_id>/delete_item', methods=['POST'])
-@login_required
-def delete_item(order_id):
-    data = request.json
-    item_name = data.get('item_name')
-    conn = get_db()
-    order = conn.execute('SELECT items FROM orders WHERE id=?', (order_id,)).fetchone()
-    if order:
-        items = json.loads(order['items'])
-        items = [i for i in items if i['name'] != item_name]
-        if len(items) == 0:
-            conn.execute('DELETE FROM orders WHERE id=?', (order_id,))
-        else:
-            conn.execute('UPDATE orders SET items=? WHERE id=?', (json.dumps(items, ensure_ascii=False), order_id))
-        conn.commit()
-    conn.close()
-    return jsonify({'success': True})
-
-@app.route('/api/menu/fix_lunch', methods=['POST'])
-@admin_required
-def fix_lunch():
-    conn = get_db()
-    # 修复category为空或错误的午市套餐
-    conn.execute('''UPDATE menu SET category="lunch", subcategory="lunch" 
-                    WHERE subcategory="lunch" OR category="lunch" OR 
-                    name_de LIKE "%Nudelsuppe%" OR name_de LIKE "%Teigtaschen%" OR
-                    name_de LIKE "%Mittagsmen%"''')
-    # 修复id 107,108,109,110,111,112,113
-    conn.execute('''UPDATE menu SET category="lunch", subcategory="lunch" 
-                    WHERE id IN (107,108,109,110,111,112,113)''')
-    conn.commit()
-    conn.close()
-    return jsonify({'success': True})
 
 @app.route('/api/menu/reset', methods=['POST'])
 @admin_required
 def reset_menu():
     conn = get_db()
-    conn.execute('DELETE FROM menu')
+    c = conn.cursor()
+    c.execute('DELETE FROM menu')
     conn.commit()
     conn.close()
     init_db()
@@ -461,13 +444,9 @@ def reset_menu():
 @app.route('/api/kitchen/orders')
 def kitchen_orders():
     conn = get_db()
-    try:
-        conn.execute('ALTER TABLE orders ADD COLUMN starter_done INTEGER DEFAULT 0')
-    except: pass
-    try:
-        conn.execute('ALTER TABLE orders ADD COLUMN main_done INTEGER DEFAULT 0')
-    except: pass
-    orders = conn.execute('''SELECT * FROM orders WHERE status = "pending" ORDER BY created_at ASC''').fetchall()
+    c = conn.cursor(cursor_factory=RealDictCursor)
+    c.execute("SELECT * FROM orders WHERE status = 'pending' ORDER BY created_at ASC")
+    orders = c.fetchall()
     conn.close()
     result = []
     for o in orders:
@@ -480,7 +459,9 @@ def kitchen_orders():
 @login_required
 def bar_orders():
     conn = get_db()
-    orders = conn.execute('''SELECT * FROM orders WHERE status IN ("pending","kitchen_done") ORDER BY created_at ASC''').fetchall()
+    c = conn.cursor(cursor_factory=RealDictCursor)
+    c.execute("SELECT * FROM orders WHERE status IN ('pending','kitchen_done') ORDER BY created_at ASC")
+    orders = c.fetchall()
     conn.close()
     result = []
     for o in orders:
@@ -493,7 +474,9 @@ def bar_orders():
 @admin_required
 def orders_history():
     conn = get_db()
-    orders = conn.execute('''SELECT * FROM orders WHERE status = "paid" ORDER BY created_at DESC LIMIT 100''').fetchall()
+    c = conn.cursor(cursor_factory=RealDictCursor)
+    c.execute("SELECT * FROM orders WHERE status = 'paid' ORDER BY created_at DESC LIMIT 100")
+    orders = c.fetchall()
     conn.close()
     result = []
     for o in orders:
@@ -501,6 +484,16 @@ def orders_history():
         od['items'] = json.loads(od['items'])
         result.append(od)
     return jsonify(result)
+
+@app.route('/api/menu/fix_lunch', methods=['POST'])
+@admin_required
+def fix_lunch():
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("UPDATE menu SET category='lunch', subcategory='lunch' WHERE id IN (107,108,109,110,111,112,113)")
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
 
 @socketio.on('urgent_request')
 def handle_urgent(data):

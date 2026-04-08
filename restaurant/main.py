@@ -194,10 +194,17 @@ def init_db():
             ('lunch','lunch','冬阴功汤+猪肉饺子套餐','Tom Yum Suppe + Schweinefleisch-Teigtaschen',11.90),
         ]
         c.executemany('INSERT INTO menu (category, subcategory, name, name_de, price) VALUES (?, ?, ?, ?, ?)', default_menu)
+    # 统一把中文category转成英文
+    cat_map = [
+        ('饮品', 'drinks'), ('开胃菜', 'starters'), ('主菜', 'mains'),
+        ('甜点', 'desserts'), ('午餐', 'lunch')
+    ]
+    for zh, en in cat_map:
+        c.execute('UPDATE menu SET category=? WHERE category=?', (en, zh))
+        c.execute('UPDATE menu SET subcategory=? WHERE subcategory=?', (en, zh))
+    
     conn.commit()
     conn.close()
-
-def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn

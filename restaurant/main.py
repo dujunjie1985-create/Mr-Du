@@ -12,6 +12,8 @@ app.config['SECRET_KEY'] = 'restaurant2026_mrdu_secret'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://postgres:hYIXrhQIuwZMOwFEqLTTIGGZFUxaDYMS@postgres.railway.internal:5432/railway')
+
+
 STAFF_PASSWORD = 'ramen2026'
 ADMIN_PASSWORD = 'djj19851204'
 connected_devices = {}
@@ -34,9 +36,27 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated
 
+_pool = None
+
+def get_pool():
+    global _pool
+    if _pool is None:
+        import psycopg2.pool
+        _pool = psycopg2.pool.ThreadedConnectionPool(3, 20, DATABASE_URL)
+    return _pool
+
 def get_db():
-    conn = psycopg2.connect(DATABASE_URL)
-    return conn
+    try:
+        return get_pool().getconn()
+    except:
+        return psycopg2.connect(DATABASE_URL)
+
+def release_db(conn):
+    try:
+        get_pool().putconn(conn)
+    except:
+        try: conn.close()
+        except: pass
 
 def init_db():
     conn = get_db()
@@ -200,7 +220,7 @@ def init_db():
         ]
         c.executemany('INSERT INTO menu (category, subcategory, name, name_de, price) VALUES (%s, %s, %s, %s, %s)', default_menu)
     conn.commit()
-    conn.close()
+    release_db(conn)
 
 @app.route('/login', methods=['GET','POST'])
 def login():
@@ -276,7 +296,7 @@ def get_tables():
     c = conn.cursor(cursor_factory=RealDictCursor)
     c.execute('SELECT * FROM tables ORDER BY id')
     tables = c.fetchall()
-    conn.close()
+    release_db(conn)
     return jsonify([dict(t) for t in tables])
 
 @app.route('/api/table/<int:table_id>')
@@ -288,7 +308,7 @@ def get_table(table_id):
     table = c.fetchone()
     c.execute("SELECT * FROM orders WHERE table_id=%s AND status != 'paid' ORDER BY created_at DESC", (table_id,))
     orders = c.fetchall()
-    conn.close()
+    release_db(conn)
     result_orders = []
     for o in orders:
         od = dict(o)
@@ -303,7 +323,7 @@ def get_menu():
     c = conn.cursor(cursor_factory=RealDictCursor)
     c.execute('SELECT * FROM menu ORDER BY category, subcategory')
     items = c.fetchall()
-    conn.close()
+    release_db(conn)
     resp = make_response(jsonify([dict(i) for i in items]))
     resp.headers['Cache-Control'] = 'public, max-age=300'
     return resp
@@ -322,7 +342,7 @@ def place_order():
     order_id = c.fetchone()['id']
     c.execute("UPDATE tables SET status='occupied' WHERE id=%s", (data['table_id'],))
     conn.commit()
-    conn.close()
+    release_db(conn)
     order_data = {'id':order_id,'table_id':data['table_id'],'table_name':data['table_name'],'zone':data['zone'],'items':data['items'],'created_at':now,'notes':data.get('notes','')}
     socketio.emit('new_order', order_data)
     return jsonify({'success':True,'order_id':order_id})
@@ -350,7 +370,7 @@ def complete_order(order_id):
     else:
         c.execute("UPDATE orders SET status='done' WHERE id=%s", (order_id,))
     conn.commit()
-    conn.close()
+    release_db(conn)
     socketio.emit('order_updated', {'order_id':order_id,'type':item_type,'section':section})
     return jsonify({'success':True})
 
@@ -371,7 +391,7 @@ def delete_item(order_id):
         else:
             c.execute('UPDATE orders SET items=%s WHERE id=%s', (json.dumps(items, ensure_ascii=False), order_id))
         conn.commit()
-    conn.close()
+    release_db(conn)
     return jsonify({'success': True})
 
 @app.route('/api/table/<int:table_id>/checkout', methods=['POST'])
@@ -382,7 +402,7 @@ def checkout(table_id):
     c.execute("UPDATE orders SET status='paid' WHERE table_id=%s", (table_id,))
     c.execute("UPDATE tables SET status='free' WHERE id=%s", (table_id,))
     conn.commit()
-    conn.close()
+    release_db(conn)
     socketio.emit('table_updated', {'table_id':table_id,'status':'free'})
     return jsonify({'success':True})
 
@@ -398,7 +418,7 @@ def swap_tables():
     c.execute("UPDATE tables SET status='occupied' WHERE id=%s", (to_id,))
     c.execute("UPDATE tables SET status='free' WHERE id=%s", (from_id,))
     conn.commit()
-    conn.close()
+    release_db(conn)
     socketio.emit('tables_swapped', {'from_id':from_id,'to_id':to_id})
     return jsonify({'success':True})
 
@@ -417,7 +437,7 @@ def update_menu():
         c.execute('INSERT INTO menu (category, subcategory, name, name_de, price) VALUES (%s, %s, %s, %s, %s)',
                   (category,subcategory,data['name'],data['name_de'],data['price']))
     conn.commit()
-    conn.close()
+    release_db(conn)
     return jsonify({'success':True})
 
 @app.route('/api/menu/<int:item_id>', methods=['DELETE'])
@@ -427,7 +447,7 @@ def delete_menu_item(item_id):
     c = conn.cursor()
     c.execute('DELETE FROM menu WHERE id=%s', (item_id,))
     conn.commit()
-    conn.close()
+    release_db(conn)
     return jsonify({'success':True})
 
 @app.route('/api/menu/reset', methods=['POST'])
@@ -437,7 +457,7 @@ def reset_menu():
     c = conn.cursor()
     c.execute('DELETE FROM menu')
     conn.commit()
-    conn.close()
+    release_db(conn)
     init_db()
     return jsonify({'success':True})
 
@@ -447,7 +467,7 @@ def kitchen_orders():
     c = conn.cursor(cursor_factory=RealDictCursor)
     c.execute("SELECT * FROM orders WHERE status = 'pending' ORDER BY created_at ASC")
     orders = c.fetchall()
-    conn.close()
+    release_db(conn)
     result = []
     for o in orders:
         od = dict(o)
@@ -462,7 +482,7 @@ def bar_orders():
     c = conn.cursor(cursor_factory=RealDictCursor)
     c.execute("SELECT * FROM orders WHERE status IN ('pending','kitchen_done') ORDER BY created_at ASC")
     orders = c.fetchall()
-    conn.close()
+    release_db(conn)
     result = []
     for o in orders:
         od = dict(o)
@@ -477,7 +497,7 @@ def orders_history():
     c = conn.cursor(cursor_factory=RealDictCursor)
     c.execute("SELECT * FROM orders WHERE status = 'paid' ORDER BY created_at DESC LIMIT 100")
     orders = c.fetchall()
-    conn.close()
+    release_db(conn)
     result = []
     for o in orders:
         od = dict(o)
@@ -492,7 +512,7 @@ def fix_lunch():
     c = conn.cursor()
     c.execute("UPDATE menu SET category='lunch', subcategory='lunch' WHERE id IN (107,108,109,110,111,112,113)")
     conn.commit()
-    conn.close()
+    release_db(conn)
     return jsonify({'success': True})
 
 @socketio.on('urgent_request')
